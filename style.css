@@ -210,3 +210,26 @@ form {
   height: 12px;
   vertical-align: middle;
 }
+
+
+/* Map Table */
+div.dataTables_scrollBody {
+  border: 0 !important;
+}
+
+div.dataTables_scrollHead {
+  color: #eee !important;
+}
+
+.dataTable * {
+  font-family: "Helvetica Neue", Arial;
+  border: 0 !important;
+}
+
+table.display {
+  background-color: #444 /*#4682b4*/;
+}
+
+div.dataTables_scrollHead table.display {
+  color: #eee;
+}

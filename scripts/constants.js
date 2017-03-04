@@ -16,7 +16,7 @@ var constants = {
 	_githubRepo: 'Author GitHub Repo Link',
 	// Map Settings
 	_tileProvider: 'Basemap Tiles',
-	_markercluster: 'Markercluster',
+	_markercluster: 'Cluster Markers',
   _introPopupText: 'Intro Popup Text',
   _initZoom: 'Initial Zoom',
   _initLat: 'Initial Center Latitude',
@@ -32,6 +32,10 @@ var constants = {
 	// Point Map Display
 	_pointsLegendTitle: 'Point Legend Title',
 	_pointsLegendPos: 'Point Legend Position',
+  // Table Map
+  _displayTable: 'Display Table',
+  _tableHeight: 'Table Height',
+  _tableColumns: 'Table Columns',
   // Polyline Map Controls
   _polylinesLegendTitle: 'Polyline Legend Title',
   _polylinesLegendPos: 'Polyline Legend Position',

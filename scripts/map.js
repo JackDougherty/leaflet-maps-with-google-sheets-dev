@@ -2,6 +2,9 @@ $(window).on('load', function() {
   var documentSettings = {};
   var markerColors = [];
 
+  /**
+   * Returns an Awesome marker with specified parameters
+   */
   function createMarkerIcon(icon, prefix, markerColor, iconColor) {
     return L.AwesomeMarkers.icon({
       icon: icon,
@@ -12,6 +15,10 @@ $(window).on('load', function() {
   }
 
 
+  /**
+   * Sets the map view so that all markers are visible, or
+   * to specified (lat, lon) and zoom if all three are specified
+   */
   function centerAndZoomMap(points) {
     var lat = map.getCenter().lat, latSet = false;
     var lon = map.getCenter().lng, lonSet = false;
@@ -47,8 +54,10 @@ $(window).on('load', function() {
   }
 
 
-  // possibly refactor this so you can add points to layers without knowing what all the layers are beforehand
-  // run this function after document is loaded but before mapPoints()
+  /**
+   * Given a collection of points, determines the layers based on 'Group'
+   * column in the spreadsheet.
+   */
   function determineLayers(points) {
     var layerNamesFromSpreadsheet = [];
     var layers = {};
@@ -77,7 +86,9 @@ $(window).on('load', function() {
     return layers;
   }
 
-  // only run this after data has loaded (onMapDataLoad())
+  /**
+   * Assigns points to appropriate layers and clusters them if needed
+   */
   function mapPoints(points, layers) {
     var markerArray = [];
     // check that map has loaded before adding points to it?
@@ -108,10 +119,27 @@ $(window).on('load', function() {
     }
 
     var group = L.featureGroup(markerArray);
+    var clusters = (getSetting('_markercluster') === 'on') ? true : false;
+
     // if layers.length === 0, add points to map instead of layer
     if (layers === undefined || layers.length === 0) {
-      clusterMarkers(group);
+      map.addLayer(
+        clusters
+        ? L.markerClusterGroup().addLayer(group).addTo(map)
+        : group
+      );
     } else {
+      if (clusters) {
+        // Add multilayer cluster support
+        multilayerClusterSupport = L.markerClusterGroup.layerSupport();
+        multilayerClusterSupport.addTo(map);
+
+        for (i in layers) {
+          multilayerClusterSupport.checkIn(layers[i]);
+          layers[i].addTo(map);
+        }
+      }
+
       var pos = (getSetting('_pointsLegendPos') == 'off')
         ? 'topleft'
         : getSetting('_pointsLegendPos');
@@ -132,7 +160,76 @@ $(window).on('load', function() {
       $('#points-legend form').toggle();
     });
 
-    return group; //centerAndZoomMap(group);
+    var displayTable = getSetting('_displayTable') == 'on' ? true : false;
+
+    // Display table with active points if specified
+    var columns = getSetting('_tableColumns').split(',')
+                  .map(Function.prototype.call, String.prototype.trim);
+
+    if (displayTable && columns.length > 1) {
+      tableHeight = trySetting('_tableHeight', 40);
+      if (tableHeight < 10 || tableHeight > 90) {tableHeight = 40;}
+      $('#map').css('height', (100 - tableHeight) + 'vh');
+      map.invalidateSize();
+
+      // Update table every time the map is moved/zoomed or point layers are toggled
+      map.on('moveend', updateTable);
+      map.on('layeradd', updateTable);
+      map.on('layerremove', updateTable);
+
+      // Clear table data and add only visible markers to it
+      function updateTable() {
+        var pointsVisible = [];
+        for (i in points) {
+          if (map.hasLayer(layers[points[i].Group]) &&
+              map.getBounds().contains(L.latLng(points[i].Latitude, points[i].Longitude))) {
+            pointsVisible.push(points[i]);
+          }
+        }
+
+        tableData = pointsToTableData(pointsVisible);
+
+        table.clear();
+        table.rows.add(tableData);
+        table.draw();
+      }
+
+      // Convert Leaflet marker objects into DataTable array
+      function pointsToTableData(ms) {
+        var data = [];
+        for (i in ms) {
+          var a = [];
+          for (j in columns) {
+            a.push(ms[i][columns[j]]);
+          }
+          data.push(a);
+        }
+        return data;
+      }
+
+      // Transform columns array into array of title objects
+      function generateColumnsArray() {
+        var c = [];
+        for (i in columns) {
+          c.push({title: columns[i]});
+        }
+        return c;
+      }
+
+      // Initialize DataTable
+      var table = $('#maptable').DataTable({
+        paging: false,
+        scrollCollapse: true,
+        scrollY: 'calc(' + tableHeight + 'vh - 40px)',
+        info: false,
+        searching: false,
+        columns: generateColumnsArray(),
+      });
+
+      updateTable();
+    }
+
+    return group;
   }
 
   /**
@@ -336,8 +433,8 @@ $(window).on('load', function() {
           style: polygonStyle,
           onEachFeature: onEachFeature
         }).addTo(map);
+        togglePolygonLabels();
       });
-      togglePolygonLabels();
     } else if (!map.hasLayer(geoJsonLayer)) {
       // Load every time after 'Off'
       geoJsonLayer.addTo(map);
@@ -380,22 +477,6 @@ $(window).on('load', function() {
     });
   }
 
-  function clusterMarkers(group) {
-    if (getSetting('_markercluster') === 'on') {
-      var cluster = L.markerClusterGroup({
-        polygonOptions: {
-          opacity: 0.3,
-          weight: 3
-        }
-      });
-      cluster.addLayer(group);
-      map.addLayer(cluster);
-    } else {
-      map.addLayer(group);
-    }
-  }
-
-
   /**
    * Here all data processing from the spreadsheet happens
    */
@@ -419,7 +500,7 @@ $(window).on('load', function() {
 
     centerAndZoomMap(group);
 
-    // Add polygons to the map
+    // Add polygons
     if (getSetting('_polygonsGeojsonURL')) {
       processPolygons();
       $('input:radio[name="prop"]').change(function() {
