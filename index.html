@@ -47,12 +47,20 @@
   <!-- Custom style sheet -->
   <link rel="stylesheet" type="text/css" href="style.css">
 
+  <!-- Layer Support for Marker Cluster -->
+  <script src="https://unpkg.com/leaflet.markercluster.layersupport@1.0.3/dist/leaflet.markercluster.layersupport.js"></script>
+
+  <!-- DataTables -->
+  <script src="https://cdn.datatables.net/1.10.13/js/jquery.dataTables.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.datatables.net/1.10.13/css/jquery.dataTables.min.css" />
+
 </head>
 
 <body>
 
   <div class="loader">Loading...</div>
   <div id="map"></div>
+  <table id="maptable" class="display"></table>
 
   <script type="text/javascript">
     var map = L.map('map', {

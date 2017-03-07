@@ -23,6 +23,8 @@ Created by [Ilya Ilyankou](https://github.com/ilyankou) and Jack Dougherty, usin
 - polylabel (Dec. 2016, https://github.com/mapbox/polylabel) is used for optimal placement of a text label on a polygon
 - TinyQueue (v1.1.0) (https://github.com/mourner/tinyqueue), polylabel's dependency
 - jQuery-CSV (v0.71) MIT License, by Evan Plaice. https://github.com/evanplaice/jquery-csv
+- DataTables (v1.10.13) MIT License, by SpryMedia Ltd. https://datatables.net
+- Leaflet.MarkerCluster.LayerSupport (v1.0.3) MIT License, https://github.com/ghybs/Leaflet.MarkerCluster.LayerSupport
 
 ## Jack will move improvements to MASTER repo
 - Leaflet Map https://jackdougherty.github.io/leaflet-maps-with-google-sheets/index.html
