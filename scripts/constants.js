@@ -4,7 +4,7 @@ var constants = {
 	optionsSheetName: 'Options',
 	pointsSheetName: 'Points',
   polygonsSheetName: 'Polygons',
-  polylinesSheetName: 'Polylines',
+  polylinesSheetName: 'Lines',
   /* OPTIONS */
 	// Map Info
   _mapTitle: 'Map Title',
@@ -36,10 +36,11 @@ var constants = {
   _displayTable: 'Display Table',
   _tableHeight: 'Table Height',
   _tableColumns: 'Table Columns',
+  _tableHeaderColor: 'Table Header Color',
   // Polyline Map Controls
-  _polylinesLegendTitle: 'Polyline Legend Title',
-  _polylinesLegendPos: 'Polyline Legend Position',
-  _polylinesWeight: 'Polyline Thickness',
+  _polylinesLegendTitle: 'Line Legend Title',
+  _polylinesLegendPos: 'Line Legend Position',
+  _polylinesWeight: 'Line Thickness',
 	// Polygon Map Display
 	_polygonsLegendTitle: 'Polygon Legend Title',
 	_polygonsLegendPosition: 'Polygon Legend Position',

@@ -1,6 +1,11 @@
 $(window).on('load', function() {
   var documentSettings = {};
-  var markerColors = [];
+  var     markerColors = [];
+
+  var polygonSettings = [];
+  var polygonSheets = 1;
+  var currentPolygonSheet = 0;
+  var polygonsLegend;
 
   /**
    * Returns an Awesome marker with specified parameters
@@ -97,12 +102,24 @@ $(window).on('load', function() {
 
       // If icon contains '.', assume it's a path to a custom icon,
       // otherwise create a Font Awesome icon
+      var iconSize = point['Marker Icon Size'];
+      var size = (iconSize.indexOf('x') > 0)
+      ? [parseInt(iconSize.split('x')[0]), parseInt(iconSize.split('x')[1])]
+      : [32, 32];
+
+      var anchor = [size[0] / 2, size[1]];
+
       var icon = (point['Marker Icon'].indexOf('.') > 0)
-        ? L.icon({iconUrl: point['Marker Icon']})
+        ? L.icon({
+          iconUrl: point['Marker Icon'],
+          iconSize: size,
+          iconAnchor: anchor
+        })
         : createMarkerIcon(point['Marker Icon'],
           'fa',
           point['Marker Color'].toLowerCase(),
-          point['Marker Icon Color']);
+          point['Marker Icon Color']
+        );
 
       if (point.Latitude !== '' && point.Longitude !== '') {
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
@@ -171,6 +188,15 @@ $(window).on('load', function() {
       if (tableHeight < 10 || tableHeight > 90) {tableHeight = 40;}
       $('#map').css('height', (100 - tableHeight) + 'vh');
       map.invalidateSize();
+
+      // Set background (and text) color of the table header
+      var colors = getSetting('_tableHeaderColor').split(',');
+      if (colors[0] != '') {
+        $('table.display').css('background-color', colors[0]);
+        if (colors.length >= 2) {
+          $('table.display').css('color', colors[1]);
+        }
+      }
 
       // Update table every time the map is moved/zoomed or point layers are toggled
       map.on('moveend', updateTable);
@@ -241,11 +267,13 @@ $(window).on('load', function() {
   var colors = [];  // sets of colors
   var isNumerical = []; // array of true/false values for each set
   var geoJsonLayer;
+  var textLabelsLayer;
+  var textLabels = [];
   var pLayer; // number representing current layer among layers in legend
 
   function processPolygons() {
-    popupProperties = getSetting('_popupProp').split(';');
-    polygonLayers = getSetting('_polygonLayers').split(';');
+    popupProperties = getPolygonSetting(currentPolygonSheet, '_popupProp').split(';');
+    polygonLayers = getPolygonSetting(currentPolygonSheet, '_polygonLayers').split(';');
 
     for (i in popupProperties) {
       popupProperties[i] = popupProperties[i].split(',');
@@ -255,14 +283,14 @@ $(window).on('load', function() {
       polygonLayers[i] = polygonLayers[i].split(',');
     }
 
-    divisors = getSetting('_bucketDivisors').split(';');
+    divisors = getPolygonSetting(currentPolygonSheet, '_bucketDivisors').split(';');
 
     if (divisors.length != polygonLayers.length) {
       alert('Error in Polygons: The number of sets of divisors has to match the number of properties');
       return;
     }
 
-    colors = getSetting('_bucketColors').split(';');
+    colors = getPolygonSetting(currentPolygonSheet, '_bucketColors').split(';');
 
     for (i = 0; i < divisors.length; i++) {
       divisors[i] = divisors[i].split(',');
@@ -282,7 +310,7 @@ $(window).on('load', function() {
         return; // Stop here
       } else if (colors[i].length == 0) {
         // If no colors specified, generate the colors
-        colors[i] = palette(trySetting('_colorScheme', 'tol-sq'), divisors[i].length);
+        colors[i] = palette(tryPolygonSetting(currentPolygonSheet, '_colorScheme', 'tol-sq'), divisors[i].length);
         for (j = 0; j < colors[i].length; j++) {
           colors[i][j] = '#' + colors[i][j].trim();
         }
@@ -304,11 +332,25 @@ $(window).on('load', function() {
       }
     }
 
-    var legendPos = trySetting('_polygonsLegendPosition', 'off');
-    var polygonsLegend = L.control({position: (legendPos == 'off') ? 'topleft' : legendPos});
+    var legendPos = tryPolygonSetting(currentPolygonSheet, '_polygonsLegendPosition', 'off');
+    polygonsLegend = L.control({position: (legendPos == 'off') ? 'topleft' : legendPos});
 
     polygonsLegend.onAdd = function(map) {
-      var content = '<h6 class="pointer">' + getSetting('_polygonsLegendTitle') + '</h6><form>';
+      var content = '';
+
+      if (polygonSheets == 1) {
+        content = '<h6 class="pointer">' + getPolygonSetting(currentPolygonSheet, '_polygonsLegendTitle') + '</h6>';
+      } else {
+        content = '<select id="polygonSelect">';
+        for (i = 0; i < polygonSheets; i++) {
+          var title = getPolygonSetting(i, '_polygonsLegendTitle');
+          if (title == '') {title = 'Polygon ' + i}
+          content += '<option value=' + i + ((i == currentPolygonSheet) ? ' selected' : '') + '>' + title + '</option>';
+        }
+        content += '</select>';
+      }
+
+      content += '<form>'
 
       for (i in polygonLayers) {
         var layer = polygonLayers[i][1]
@@ -329,6 +371,15 @@ $(window).on('load', function() {
 
     polygonsLegend.addTo(map);
 
+    $('#polygonSelect').change(function() {
+      map.removeControl(polygonsLegend);
+      map.removeLayer(geoJsonLayer);
+      geoJsonLayer = null;
+      currentPolygonSheet = parseInt($(this).val());
+      processPolygons();
+      //updatePolygons(0);
+    });
+
     $('.polygons-legend h6').click(function() {
       if ($('input[name=prop]:checked').val() != '-1') {
         $(this).siblings().toggle();
@@ -336,6 +387,15 @@ $(window).on('load', function() {
         $('.polygons-legend>form').toggle();
       }
     });
+
+    // This is triggered both when user changes the radio button
+    // or #polygonSelect changes the geojson displayed
+    $('input:radio[name="prop"]').change(function() {
+      updatePolygons($(this).val());
+    });
+
+    $('input:radio[name="prop"][value="0"]').click();
+    togglePolygonLabels();
 
     if (legendPos == 'off') {
       $('.polygons-legend').hide();
@@ -349,9 +409,9 @@ $(window).on('load', function() {
     return {
       weight: 2,
       opacity: 1,
-      color: trySetting('_outlineColor', 'white'),
+      color: tryPolygonSetting(currentPolygonSheet, '_outlineColor', 'white'),
       dashArray: '3',
-      fillOpacity: trySetting('_colorOpacity', '0.7'),
+      fillOpacity: tryPolygonSetting(currentPolygonSheet, '_colorOpacity', '0.7'),
       fillColor: getColor(feature.properties[polygonLayers[pLayer][0].trim()])
     };
   }
@@ -393,7 +453,7 @@ $(window).on('load', function() {
       info += ': <b>' + feature.properties[popupProperties[i][0].trim()] + '</b><br>';
     }
 
-    if (getSetting('_polygonDisplayImages') == 'on') {
+    if (getPolygonSetting(currentPolygonSheet, '_polygonDisplayImages') == 'on') {
       if (feature.properties['img']) {
         info += '<img src="' + feature.properties['img'] + '">';
       }
@@ -402,37 +462,44 @@ $(window).on('load', function() {
     layer.bindPopup(info);
 
     // Add polygon label if needed
-    if (getSetting('_polygonLabel') != '') {
+    if (getPolygonSetting(currentPolygonSheet, '_polygonLabel') != '') {
       var myTextLabel = L.marker(polylabel(layer.feature.geometry.coordinates, 1.0).reverse(), {
         icon: L.divIcon({
           className: 'polygon-label',
-          html: feature.properties[getSetting('_polygonLabel')],
+          html: feature.properties[getPolygonSetting(currentPolygonSheet, '_polygonLabel')],
         })
       });
-      myTextLabel.addTo(map);
+      textLabels.push(myTextLabel);
+      //myTextLabel.addTo(map);
     }
   }
 
   /**
-   * Loads polygons from layer p
+   * Refreshes polygons so they reflect a specified layer z (radio buttons)
    */
-  function updatePolygons(p) {
-    if (p == '-1') {
+  function updatePolygons(z) {
+    if (z == '-1') {
       $('.polygons-legend-scale').hide();
       map.removeLayer(geoJsonLayer);
       $('.polygon-label').hide();
       return;
     }
 
-    pLayer = p;
+    pLayer = z;
 
     if (!geoJsonLayer) {
+      textLabels = [];
+      if (textLabelsLayer && map.hasLayer(textLabelsLayer)) {
+        map.removeLayer(textLabelsLayer);
+      }
       // Load the very first time polygons-sample.geojson
-      $.getJSON(getSetting('_polygonsGeojsonURL'), function(data) {
+      $.getJSON(getPolygonSetting(currentPolygonSheet, '_polygonsGeojsonURL'), function(data) {
         geoJsonLayer = L.geoJson(data, {
           style: polygonStyle,
           onEachFeature: onEachFeature
         }).addTo(map);
+        textLabelsLayer = L.featureGroup(textLabels);
+        textLabelsLayer.addTo(map);
         togglePolygonLabels();
       });
     } else if (!map.hasLayer(geoJsonLayer)) {
@@ -440,7 +507,6 @@ $(window).on('load', function() {
       geoJsonLayer.addTo(map);
       geoJsonLayer.setStyle(polygonStyle);
       togglePolygonLabels();
-
       // Toggle polylines (turn them off and then on) so they remain on top
       doubleClickPolylines();
     } else {
@@ -453,14 +519,14 @@ $(window).on('load', function() {
     var labels = [];
     var from, to;
 
-    for (var i = 0; i < divisors[p].length; i++) {
-      from = divisors[p][i];
-      to = divisors[p][i + 1];
+    for (var i = 0; i < divisors[z].length; i++) {
+      from = divisors[z][i];
+      to = divisors[z][i + 1];
 
       labels.push(
         '<i style="background:' + getColor(from) + '; opacity: '
-        + trySetting('_colorOpacity', '0.7') + '"></i> ' +
-        from + ((to && isNumerical[p]) ? '&ndash;' + to : (isNumerical[p]) ? '+' : ''));
+        + tryPolygonSetting(currentPolygonSheet, '_colorOpacity', '0.7') + '"></i> ' +
+        from + ((to && isNumerical[z]) ? '&ndash;' + to : (isNumerical[z]) ? '+' : ''));
     }
 
     $('.polygons-legend-scale').html(labels.join('<br>'));
@@ -482,15 +548,21 @@ $(window).on('load', function() {
    */
   function onMapDataLoad() {
     var options = mapData.sheets(constants.optionsSheetName).elements;
-    var polygons = mapData.sheets(constants.polygonsSheetName).elements;
-    createDocumentSettings(options.concat(polygons));
+    createDocumentSettings(options);
+
+    createPolygonSettings(mapData.sheets(constants.polygonsSheetName).elements);
+    i = 1;
+    while (mapData.sheets(constants.polygonsSheetName + i)) {
+      createPolygonSettings(mapData.sheets(constants.polygonsSheetName + i).elements);
+      i++;
+      polygonSheets++;
+    }
 
     document.title = getSetting('_mapTitle');
     addBaseMap();
 
     // Add point markers to the map
     var points = mapData.sheets(constants.pointsSheetName).elements;
-
     var layers;
     var group = '';
     if (points.length > 0) {
@@ -500,20 +572,15 @@ $(window).on('load', function() {
 
     centerAndZoomMap(group);
 
-    // Add polygons
-    if (getSetting('_polygonsGeojsonURL')) {
-      processPolygons();
-      $('input:radio[name="prop"]').change(function() {
-        updatePolygons($(this).val());
-      });
-      $('input:radio[name="prop"][value="0"]').click();
-      togglePolygonLabels();
-    }
-
     // Add polylines
     var polylines = mapData.sheets(constants.polylinesSheetName).elements;
     if (polylines.length > 0) {
       processPolylines(polylines);
+    }
+
+    // Add polygons
+    if (getPolygonSetting(0, '_polygonsGeojsonURL')) {
+      processPolygons();
     }
 
     // Add Mapzen search control
@@ -691,7 +758,7 @@ $(window).on('load', function() {
    * Turns on and off polygon text labels depending on current map zoom
    */
   function togglePolygonLabels() {
-    if (map.getZoom() <= trySetting('_polygonLabelMaxZoom', 9)) {
+    if (map.getZoom() <= tryPolygonSetting(currentPolygonSheet, '_polygonLabelMaxZoom', 9)) {
       $('.polygon-label').hide();
     } else {
       if ($('input[name=prop]:checked').val() != '-1') {
@@ -747,6 +814,14 @@ $(window).on('load', function() {
   }
 
   /**
+   * Returns the value of a setting s
+   * getSetting(s) is equivalent to documentSettings[constants.s]
+   */
+  function getPolygonSetting(p, s) {
+    return polygonSettings[p][constants[s]];
+  }
+
+  /**
    * Returns the value of setting named s from constants.js
    * or def if setting is either not set or does not exist
    * Both arguments are strings
@@ -754,6 +829,12 @@ $(window).on('load', function() {
    */
   function trySetting(s, def) {
     s = getSetting(s);
+    if (!s || s.trim() === '') { return def; }
+    return s;
+  }
+
+  function tryPolygonSetting(p, s, def) {
+    s = getPolygonSetting(p, s);
     if (!s || s.trim() === '') { return def; }
     return s;
   }
@@ -794,6 +875,19 @@ $(window).on('load', function() {
       var setting = settings[i];
       documentSettings[setting.Setting] = setting.Customize;
     }
+  }
+
+  /**
+   * Reformulates polygonSettings as a dictionary, e.g.
+   * {"webpageTitle": "Leaflet Boilerplate", "infoPopupText": "Stuff"}
+   */
+  function createPolygonSettings(settings) {
+    p = {};
+    for (var i in settings) {
+      var setting = settings[i];
+      p[setting.Setting] = setting.Customize;
+    }
+    polygonSettings.push(p);
   }
 
 });
