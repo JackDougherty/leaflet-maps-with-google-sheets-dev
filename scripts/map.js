@@ -336,14 +336,12 @@ $(window).on('load', function() {
     polygonsLegend = L.control({position: (legendPos == 'off') ? 'topleft' : legendPos});
 
     polygonsLegend.onAdd = function(map) {
-      var content = '';
-
-      if (polygonSheets == 1) {
-        content = '<h6 class="pointer">' + getPolygonSetting(currentPolygonSheet, '_polygonsLegendTitle') + '</h6>';
-      } else {
-        content = '<select id="polygonSelect">';
+      var content = '<h6 class="pointer">' + getPolygonSetting(currentPolygonSheet, '_polygonsLegendTitle') + '</h6>';
+ 
+      if (polygonSheets > 1) {
+        content += '<select id="polygonSelect">';
         for (i = 0; i < polygonSheets; i++) {
-          var title = getPolygonSetting(i, '_polygonsLegendTitle');
+          var title = getPolygonSetting(i, '_polygonsGeojsonName');
           if (title == '') {title = 'Polygon ' + i}
           content += '<option value=' + i + ((i == currentPolygonSheet) ? ' selected' : '') + '>' + title + '</option>';
         }
@@ -377,7 +375,6 @@ $(window).on('load', function() {
       geoJsonLayer = null;
       currentPolygonSheet = parseInt($(this).val());
       processPolygons();
-      //updatePolygons(0);
     });
 
     $('.polygons-legend h6').click(function() {

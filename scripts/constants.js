@@ -44,6 +44,7 @@ var constants = {
 	// Polygon Map Display
 	_polygonsLegendTitle: 'Polygon Legend Title',
 	_polygonsLegendPosition: 'Polygon Legend Position',
+  _polygonsGeojsonName: 'Polygon GeoJSON Name',
   _polygonsGeojsonURL: 'Polygon GeoJSON URL',
   _popupProp: 'Property Popups, Labels',
   _polygonLayers: 'Polygon Properties, Labels',
