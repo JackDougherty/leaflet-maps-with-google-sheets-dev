@@ -685,13 +685,21 @@ $(window).on('load', function() {
     for (i = 0; i < p.length; i++) {
       $.getJSON(p[i]['GeoJSON URL'], function(index) {
         return function(data) {
-          latlng = data['features'][0].geometry.coordinates;
+          latlng = [];
+
+          for (l in data['features']) {
+            latlng.push(data['features'][l].geometry.coordinates);
+          }
 
           // Reverse [lon, lat] to [lat, lon] for each point
-          for (j in latlng) {
-            a = latlng[j][0];
-            b = latlng[j][1];
-            latlng[j] = [b, a];
+          for (l in latlng) {
+            for (c in latlng[l]) {
+              latlng[l][c].reverse();
+              // If coords contained 'z' (altitude), remove it
+              if (latlng[l][c].length == 3) {
+                latlng[l][c].shift();
+              }
+            }
           }
 
           line = L.polyline(latlng, {
