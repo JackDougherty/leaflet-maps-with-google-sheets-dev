@@ -15,7 +15,7 @@ Created by [Ilya Ilyankou](https://github.com/ilyankou) and Jack Dougherty, usin
 - leaflet-locatecontrol (v0.60.0) https://github.com/domoritz/leaflet-locatecontrol (MIT)
 - Leaflet.markercluster (v1.0.0) https://github.com/Leaflet/Leaflet.markercluster (MIT)
 - Font Awesome (v4.6.3 via CDN) https://cdn.fontawesome.com (MIT, SIL OFL 1.1)
-- Leaflet.awesome-markers (v2.0.2) https://github.com/lvoogdt/Leaflet.awesome-markers (MIT)
+- Leaflet.awesome-markers (v2.0) https://github.com/sigma-geosistemas/Leaflet.awesome-markers (MIT)
 - Single Element CSS Spinner (31 May 2016) https://github.com/lukehaas/css-loaders (MIT)
 - Tabletop.js, gives spreadsheets legs, by returning Google Sheets data in JSON format (v1.4.3) https://github.com/jsoma/tabletop (MIT)
 - Google Colour Palette Generator (2015) https://github.com/google/palette.js (MIT)
