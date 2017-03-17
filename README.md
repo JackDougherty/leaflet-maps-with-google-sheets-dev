@@ -2,11 +2,18 @@
 code development for improving Leaflet Maps with Google Sheets
 
 ## DEVELOPMENT Demo
-- Leaflet Map https://jackdougherty.github.io/leaflet-maps-with-google-sheets-dev/index.html
+- Leaflet Map FOR DEVELOPMENT https://jackdougherty.github.io/leaflet-maps-with-google-sheets-dev/index.html
 - Google Sheet FOR DEVELOPMENT https://docs.google.com/spreadsheets/d/1_xjrH3gSImzRKqIkhRAqpAAMjH387yaBWfGbidkKtqM/
 
+## See official releases in the MAIN repo
+- Leaflet Map https://jackdougherty.github.io/leaflet-maps-with-google-sheets/index.html
+- Google Sheet https://docs.google.com/spreadsheets/d/1ZxvU8eGyuN9M8GxTU9acKVJv70iC3px_m3EVFsOHN9g/edit#gid=0
+
+## Create your own version
+- Leaflet Maps with Google Sheets tutorial in free online book, *Data Visualization for All*, http://www.datavizforall.org/leaflet/with-google-sheets/
+
 ## Credits (and licenses)
-Created by [Ilya Ilyankou](https://github.com/ilyankou) and Jack Dougherty, using a [Google Sheets](https://www.google.com/sheets/about/) template, with these open-source components:
+Created by [Ilya Ilyankou](https://github.com/ilyankou) and [Jack Dougherty](https://github.com/jackdougherty) at Trinity College CT, using a [Google Sheets](https://www.google.com/sheets/about/) template, with these open-source components:
 - Code for Atlanta mapsfor.us (2016) https://github.com/codeforatlanta/mapsforus (BSD-3-Clause)
 - Leaflet v1.0.3 https://github.com/Leaflet/Leaflet (BSD-2-Clause)
 - jQuery v3.1.0 https://jquery.org (MIT)
@@ -25,7 +32,3 @@ Created by [Ilya Ilyankou](https://github.com/ilyankou) and Jack Dougherty, usin
 - jQuery-CSV (v0.71) MIT License, by Evan Plaice. https://github.com/evanplaice/jquery-csv
 - DataTables (v1.10.13) MIT License, by SpryMedia Ltd. https://datatables.net
 - Leaflet.MarkerCluster.LayerSupport (v1.0.3) MIT License, https://github.com/ghybs/Leaflet.MarkerCluster.LayerSupport
-
-## Jack will move improvements to MASTER repo
-- Leaflet Map https://jackdougherty.github.io/leaflet-maps-with-google-sheets/index.html
-- Google Sheet https://docs.google.com/spreadsheets/d/1ZxvU8eGyuN9M8GxTU9acKVJv70iC3px_m3EVFsOHN9g/edit#gid=0
