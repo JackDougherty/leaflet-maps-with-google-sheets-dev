@@ -28,6 +28,6 @@ Created by [Ilya Ilyankou](https://github.com/ilyankou) and [Jack Dougherty](htt
 - Tabletop.js gives spreadsheets legs, by returning Google Sheets data in JSON format (v1.5.1) https://github.com/jsoma/tabletop (MIT)
 - Google Colour Palette Generator (2015) https://github.com/google/palette.js (MIT)
 - Google Sheets Geocoder (v1.0) by Ilya Ilyankou and Jack Dougherty https://github.com/jackdougherty/google-sheets-geocoder (no license)
-- polylabel (Dec. 2016, https://github.com/mapbox/polylabel) to optimally place text labels in a polygon (ISC), with TinyQueue (v1.1.0) (https://github.com/mourner/tinyqueue), polylabel's dependency (ISC)
+- polylabel (Dec. 2016 customized) https://github.com/mapbox/polylabel to optimally place text labels in a polygon (ISC), with TinyQueue (v1.1.0) (https://github.com/mourner/tinyqueue), polylabel's dependency (ISC)
 - jQuery-CSV (v0.71) https://github.com/evanplaice/jquery-csv (MIT)
 - DataTables (v1.10.13) by SpryMedia Ltd. https://datatables.net (MIT)
