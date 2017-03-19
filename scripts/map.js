@@ -102,7 +102,7 @@ $(window).on('load', function() {
 
       // If icon contains '.', assume it's a path to a custom icon,
       // otherwise create a Font Awesome icon
-      var iconSize = point['Marker Icon Size'];
+      var iconSize = point['Custom Size'];
       var size = (iconSize.indexOf('x') > 0)
       ? [parseInt(iconSize.split('x')[0]), parseInt(iconSize.split('x')[1])]
       : [32, 32];
@@ -118,7 +118,7 @@ $(window).on('load', function() {
         : createMarkerIcon(point['Marker Icon'],
           'fa',
           point['Marker Color'].toLowerCase(),
-          point['Marker Icon Color']
+          point['Icon Color']
         );
 
       if (point.Latitude !== '' && point.Longitude !== '') {
@@ -337,7 +337,7 @@ $(window).on('load', function() {
 
     polygonsLegend.onAdd = function(map) {
       var content = '<h6 class="pointer">' + getPolygonSetting(currentPolygonSheet, '_polygonsLegendTitle') + '</h6>';
- 
+
       if (polygonSheets > 1) {
         content += '<select id="polygonSelect">';
         for (i = 0; i < polygonSheets; i++) {
