@@ -13,7 +13,7 @@ code development for improving Leaflet Maps with Google Sheets
 - Leaflet Maps with Google Sheets tutorial in free online book, *Data Visualization for All*, http://www.datavizforall.org/leaflet/with-google-sheets/
 
 ## Credits (and licenses)
-Created by [Ilya Ilyankou](https://github.com/ilyankou) and [Jack Dougherty](https://github.com/jackdougherty) with support from Trinity College CT, using a [Google Sheets](https://www.google.com/sheets/about/) template, with these open-source components:
+Developed by [Ilya Ilyankou](https://github.com/ilyankou) and [Jack Dougherty](https://github.com/jackdougherty) with support from Trinity College CT, using a [Google Sheets](https://www.google.com/sheets/about/) template, with these open-source components:
 - Inspired by: Code for Atlanta mapsfor.us (2016) https://github.com/codeforatlanta/mapsforus (BSD-3-Clause)
 - Leaflet v1.0.3 https://leafletjs.com (BSD-2-Clause)
 - jQuery v3.2.0 https://code.jquery.com (MIT)
