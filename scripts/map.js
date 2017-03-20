@@ -123,7 +123,7 @@ $(window).on('load', function() {
 
       if (point.Latitude !== '' && point.Longitude !== '') {
         var marker = L.marker([point.Latitude, point.Longitude], {icon: icon})
-          .bindPopup("<b>" + point['Title'] + '</b><br>' +
+          .bindPopup("<b>" + point['Name'] + '</b><br>' +
           (point['Image'] ? ('<img src="' + point['Image'] + '"><br>') : '') +
           point['Description']);
 
@@ -801,7 +801,7 @@ $(window).on('load', function() {
    * Loads the basemap and adds it to the map
    */
   function addBaseMap() {
-    var basemap = trySetting('_tileProvider', 'Stamen.TonerLite');
+    var basemap = trySetting('_tileProvider', 'CartoDB.Positron');
     L.tileLayer.provider(basemap, {
       maxZoom: 18
     }).addTo(map);
