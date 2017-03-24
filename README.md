@@ -18,7 +18,7 @@ Developed by [Ilya Ilyankou](https://github.com/ilyankou) and [Jack Dougherty](h
 - Leaflet v1.0.3 https://leafletjs.com (BSD-2-Clause)
 - jQuery v3.2.0 https://code.jquery.com (MIT)
 - leaflet-providers (v1.1.15, manually updated for Carto https) https://github.com/leaflet-extras/leaflet-providers (BSD-2-Clause)
-- Mapzen Search geocoding plugin (v1.8.1) https://github.com/mapzen/leaflet-geocoder (MIT)
+- Mapzen Search geocoding plugin (v1.8.1, customized to display a blue circle around the search result) https://github.com/mapzen/leaflet-geocoder (MIT)
 - leaflet-locatecontrol (v0.60.0) https://github.com/domoritz/leaflet-locatecontrol (MIT)
 - Leaflet.markercluster (v1.0.4) https://github.com/Leaflet/Leaflet.markercluster (MIT)
 - Leaflet.MarkerCluster.LayerSupport (v.1.0.3) https://github.com/ghybs/Leaflet.MarkerCluster.LayerSupport (MIT)
