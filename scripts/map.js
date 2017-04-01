@@ -294,7 +294,6 @@ $(window).on('load', function() {
     }
 
     colors = getPolygonSetting(currentPolygonSheet, '_bucketColors').split(';');
-
     for (i = 0; i < divisors.length; i++) {
       divisors[i] = divisors[i].split(',');
       for (j = 0; j < divisors[i].length; j++) {
@@ -351,7 +350,7 @@ $(window).on('load', function() {
         content += '</select>';
       }
 
-      content += '<form>'
+      content += '<form>';
 
       for (i in polygonLayers) {
         var layer = polygonLayers[i][1]
@@ -374,7 +373,9 @@ $(window).on('load', function() {
 
     $('#polygonSelect').change(function() {
       map.removeControl(polygonsLegend);
-      map.removeLayer(geoJsonLayer);
+      if (map.hasLayer(geoJsonLayer)) {
+        map.removeLayer(geoJsonLayer);
+      }
       geoJsonLayer = null;
       currentPolygonSheet = parseInt($(this).val());
       processPolygons();
@@ -434,6 +435,7 @@ $(window).on('load', function() {
       }
     }
 
+    if (!colors[pLayer][i]) {i = 0;}
     return colors[pLayer][i].trim();
   }
 
