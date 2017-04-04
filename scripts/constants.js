@@ -21,6 +21,7 @@ var constants = {
   _initZoom: 'Initial Zoom',
   _initLat: 'Initial Center Latitude',
   _initLon: 'Initial Center Longitude',
+  _displayAllPolygons: 'Display Polygons Simultaneously',
 	// Map Controls
 	_mapSearch: 'Search Button',
   _mapSearchKey: 'Mapzen Search Key',

@@ -6,6 +6,7 @@ $(window).on('load', function() {
   var polygonSheets = 1;
   var currentPolygonSheet = 0;
   var polygonsLegend;
+  var displayAllPolygons = true;
 
   var completePoints = false;
   var completePolygons = false;
@@ -405,10 +406,245 @@ $(window).on('load', function() {
     completePolygons = true;
   }
 
+
+  allDivisors = [];
+  allColors = [];
+  allIsNumerical = [];
+  allGeojsons = [];
+  allPolygonLegends = [];
+  allPolygonLayers = [];
+
+  function loadAllGeojsons(p) {
+    if (p < polygonSettings.length && getPolygonSetting(p, '_polygonsGeojsonURL')) {
+      $.getJSON(getPolygonSetting(p, '_polygonsGeojsonURL'), function(data) {
+          geoJsonLayer = L.geoJson(data, {
+            //style: polygonStyle,
+            //onEachFeature: onEachFeature
+          });//.addTo(map);
+          allGeojsons.push(geoJsonLayer);
+          loadAllGeojsons(p+1);
+      });
+    } else {
+      processAllPolygons();
+    }
+  }
+
+  function processAllPolygons() {
+    var p = 0;  // polygon sheet
+
+    while (p < polygonSettings.length && getPolygonSetting(p, '_polygonsGeojsonURL')) {
+      isNumerical = [];
+      divisors = [];
+      colors = [];
+
+      popupProperties = getPolygonSetting(p, '_popupProp').split(';');
+      polygonLayers = getPolygonSetting(p, '_polygonLayers').split(';');
+
+      for (i in popupProperties) { popupProperties[i] = popupProperties[i].split(','); }
+      for (i in polygonLayers) { polygonLayers[i] = polygonLayers[i].split(','); }
+
+      divisors = getPolygonSetting(p, '_bucketDivisors').split(';');
+
+      if (divisors.length != polygonLayers.length) {
+        alert('Error in Polygons: The number of sets of divisors has to match the number of properties');
+        return;
+      }
+
+      colors = getPolygonSetting(p, '_bucketColors').split(';');
+      for (i = 0; i < divisors.length; i++) {
+        divisors[i] = divisors[i].split(',');
+        for (j = 0; j < divisors[i].length; j++) {
+          divisors[i][j] = divisors[i][j].trim();
+        }
+        if (!colors[i]) {
+          colors[i] = [];
+        } else {
+          colors[i] = colors[i].split(',');
+        }
+      }
+
+      for (i = 0; i < divisors.length; i++) {
+        if (divisors[i].length == 0) {
+          alert('Error in Polygons: The number of divisors should be > 0');
+          return; // Stop here
+        } else if (colors[i].length == 0) {
+          // If no colors specified, generate the colors
+          colors[i] = palette(tryPolygonSetting(p, '_colorScheme', 'tol-sq'), divisors[i].length);
+          for (j = 0; j < colors[i].length; j++) {
+            colors[i][j] = '#' + colors[i][j].trim();
+          }
+        } else if (divisors[i].length != colors[i].length) {
+          alert('Error in Polygons: The number of divisors should match the number of colors');
+          return; // Stop here
+        }
+      }
+
+      // For each set of divisors, decide whether textual or numerical
+      for (i = 0; i < divisors.length; i++) {
+        if (!isNaN(parseFloat(divisors[i][0].trim()))) {
+          isNumerical[i] = true;
+          for (j = 0; j < divisors[i].length; j++) {
+            divisors[i][j] = parseFloat(divisors[i][j].trim());
+          }
+        } else {
+          isNumerical[i] = false;
+        }
+      }
+
+      allDivisors.push(divisors);
+      allColors.push(colors);
+      allIsNumerical.push(isNumerical);
+      allPolygonLayers.push(polygonLayers);
+
+      var legendPos = tryPolygonSetting(p, '_polygonsLegendPosition', 'off');
+      polygonsLegend = L.control({position: (legendPos == 'off') ? 'topleft' : legendPos});
+
+      polygonsLegend.onAdd = function(map) {
+        var content = '<h6 class="pointer">' + getPolygonSetting(p, '_polygonsGeojsonName') + '</h6>';
+        content += '<form>';
+
+        for (i in polygonLayers) {
+          var layer = polygonLayers[i][1]
+            ? polygonLayers[i][1].trim()
+            : polygonLayers[i][0].trim();
+
+          content += '<label><input type="radio" name="prop" value="' + p + ';' + i + '"> ';
+          content += layer + '</label><br>';
+        }
+
+        content += '<label><input type="radio" name="prop" value="' + p + ';-1"> Off</label></form><div class="polygons-legend-scale">';
+
+        var div = L.DomUtil.create('div', 'leaflet-control leaflet-control-custom leaflet-bar polygons-legend-merged polygons-legend' + p);
+        div.innerHTML = content;
+        div.innerHTML += '</div>';
+        return div;
+      };
+
+      polygonsLegend.addTo(map);
+      allPolygonLegends.push(polygonsLegend);
+
+      // This is triggered when user changes the radio button
+      $('.polygons-legend' + p + ' input:radio[name="prop"]').change(function() {
+        var polygonNumber = parseInt($(this).val().split(';')[0]);
+        var layerNumber = parseInt($(this).val().split(';')[1]);
+
+        if (layerNumber == -1) {
+          $('.polygons-legend' + polygonNumber).find('.polygons-legend-scale').hide();
+          if (map.hasLayer(allGeojsons[polygonNumber])) {
+            map.removeLayer(allGeojsons[polygonNumber]);
+          }
+        } else {
+          updatePolygonK(layerNumber, polygonNumber);
+        }
+      });
+
+      //togglePolygonLabels();
+
+      p++;
+    }
+
+    $('.polygons-legend-merged h6').click(function() {
+      if ($(this).parent().find('form').is(':visible')) {
+        $(this).siblings().hide();
+      } else {
+        $('.polygons-legend-merged form, .polygons-legend-merged div').hide();
+        if ($(this).parent().find('input[name=prop]:checked').val().split(';')[1] != '-1') {
+          $(this).siblings().toggle();
+        } else {
+          $(this).parent().find('form').toggle();
+        }
+      }
+    });
+
+    for (t = 0; t < p; t++) {
+      $('.polygons-legend-merged input:radio[name="prop"][value="' + t + ';0"]').click();
+    }
+
+    $('.polygons-legend-merged h6').eq(0).click().click();
+
+    completePolygons = true;
+  }
+
+  polygon = 0;
+  layer = 0;
+
+  function updatePolygonK(z, p) {
+    /*
+    if (!geoJsonLayer) {
+      textLabels = [];
+      if (textLabelsLayer && map.hasLayer(textLabelsLayer)) {
+        //map.removeLayer(textLabelsLayer);
+      }
+      // Load the very first time polygons-sample.geojson
+
+      $.getJSON(getPolygonSetting(p, '_polygonsGeojsonURL'), function(data) {
+        geoJsonLayer = L.geoJson(data, {
+          //style: polygonStyle,
+          //onEachFeature: onEachFeature
+        }).addTo(map);
+
+        textLabelsLayer = L.featureGroup(textLabels);
+        textLabelsLayer.addTo(map);
+        togglePolygonLabels();
+        doubleClickPolylines();
+      });
+
+    } else if (!map.hasLayer(geoJsonLayer)) {
+      // Load every time after 'Off'
+      geoJsonLayer.addTo(map);
+      geoJsonLayer.setStyle(polygonStyle);
+      togglePolygonLabels();
+      doubleClickPolylines();
+    } else {
+      // Just update colors
+      geoJsonLayer.setStyle(polygonStyle);
+      doubleClickPolylines();
+    } */
+
+    polygon = p;
+    layer = z;
+    allGeojsons[p].setStyle(polygonStyle);
+
+    if (!map.hasLayer(allGeojsons[p])) {
+      map.addLayer(allGeojsons[p]);
+    }
+
+    doubleClickPolylines();
+
+    $('.polygons-legend' + p + ' .polygons-legend-scale').html('');
+
+    var labels = [];
+    var from, to;
+
+    for (var i = 0; i < allDivisors[p][z].length; i++) {
+      from = allDivisors[p][z][i];
+      to = allDivisors[p][z][i + 1];
+
+      labels.push(
+        '<i style="background:' + getColor(from, p, z) + '; opacity: '
+        + tryPolygonSetting(p, '_colorOpacity', '0.7') + '"></i> ' +
+        from + ((to && allIsNumerical[p][z]) ? '&ndash;' + to : (allIsNumerical[p][z]) ? '+' : ''));
+    }
+
+    $('.polygons-legend' + p + ' .polygons-legend-scale').html(labels.join('<br>'));
+    $('.polygons-legend' + p + ' .polygons-legend-scale').show();
+  }
+
   /**
    * Generates CSS for each polygon in polygons
    */
   function polygonStyle(feature) {
+    if (displayAllPolygons) {
+      return {
+        weight: 2,
+        opacity: 1,
+        color: tryPolygonSetting(polygon, '_outlineColor', 'white'),
+        dashArray: '3',
+        fillOpacity: tryPolygonSetting(polygon, '_colorOpacity', '0.7'),
+        fillColor: getColor(feature.properties[allPolygonLayers[polygon][layer][0].trim()], polygon, layer)
+      };
+    }
+
     return {
       weight: 2,
       opacity: 1,
@@ -423,20 +659,38 @@ $(window).on('load', function() {
   /**
    * Returns a color for polygon property with value d
    */
-  function getColor(d) {
-    var i;
+  function getColor(d, p, z) {
+    if (typeof p === 'undefined') {
+      var i;
 
-    if (isNumerical[pLayer]) {
-      i = colors[pLayer].length - 1;
-      while (d < divisors[pLayer][i]) i -= 1;
-    } else {
-      for (i = 0; i < colors[pLayer].length - 1; i++) {
-        if (d == divisors[pLayer][i]) break;
+      if (isNumerical[pLayer]) {
+        i = colors[pLayer].length - 1;
+        while (d < divisors[pLayer][i]) i -= 1;
+      } else {
+        for (i = 0; i < colors[pLayer].length - 1; i++) {
+          if (d == divisors[pLayer][i]) break;
+        }
       }
+
+      if (!colors[pLayer][i]) {i = 0;}
+      return colors[pLayer][i].trim();
     }
 
-    if (!colors[pLayer][i]) {i = 0;}
-    return colors[pLayer][i].trim();
+    else {
+      var i;
+
+      if (allIsNumerical[p][z]) {
+        i = allColors[p][z].length - 1;
+        while (d < allDivisors[p][z][i]) i -= 1;
+      } else {
+        for (i = 0; i < allColors[p][z].length - 1; i++) {
+          if (d == allDivisors[p][z][i]) break;
+        }
+      }
+
+      if (!allColors[p][z][i]) {i = 0;}
+      return allColors[p][z][i].trim();
+    }
   }
 
 
@@ -587,8 +841,14 @@ $(window).on('load', function() {
     }
 
     // Add polygons
+    displayAllPolygons = getSetting('_displayAllPolygons') === 'true' ? true : false;
+
     if (getPolygonSetting(0, '_polygonsGeojsonURL')) {
-      processPolygons();
+      if (displayAllPolygons) {
+        loadAllGeojsons(0);
+      } else {
+        processPolygons();
+      }
     } else {
       completePolygons = true;
     }

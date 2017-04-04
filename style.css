@@ -215,6 +215,15 @@ form {
   vertical-align: middle;
 }
 
+.polygons-legend-merged {
+  width: 160px;
+  overflow: hidden;
+  margin-top: 0px !important;
+}
+
+.polygons-legend0 {
+  margin-top: 10px !important;
+}
 
 /* Map Table */
 div.dataTables_scrollBody {
