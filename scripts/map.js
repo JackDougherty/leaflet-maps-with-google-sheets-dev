@@ -418,9 +418,12 @@ $(window).on('load', function() {
     if (p < polygonSettings.length && getPolygonSetting(p, '_polygonsGeojsonURL')) {
       $.getJSON(getPolygonSetting(p, '_polygonsGeojsonURL'), function(data) {
           geoJsonLayer = L.geoJson(data, {
-            //style: polygonStyle,
-            //onEachFeature: onEachFeature
-          });//.addTo(map);
+            pointToLayer: function(feature, latlng) {
+              return L.circleMarker(latlng, {
+                className: 'geojson-point-marker'
+              });
+            }
+          });
           allGeojsons.push(geoJsonLayer);
           loadAllGeojsons(p+1);
       });
@@ -508,6 +511,8 @@ $(window).on('load', function() {
             ? polygonLayers[i][1].trim()
             : polygonLayers[i][0].trim();
 
+            layer = (layer == '') ? 'On' : layer;
+
           content += '<label><input type="radio" name="prop" value="' + p + ';' + i + '"> ';
           content += layer + '</label><br>';
         }
@@ -569,38 +574,6 @@ $(window).on('load', function() {
   layer = 0;
 
   function updatePolygonK(z, p) {
-    /*
-    if (!geoJsonLayer) {
-      textLabels = [];
-      if (textLabelsLayer && map.hasLayer(textLabelsLayer)) {
-        //map.removeLayer(textLabelsLayer);
-      }
-      // Load the very first time polygons-sample.geojson
-
-      $.getJSON(getPolygonSetting(p, '_polygonsGeojsonURL'), function(data) {
-        geoJsonLayer = L.geoJson(data, {
-          //style: polygonStyle,
-          //onEachFeature: onEachFeature
-        }).addTo(map);
-
-        textLabelsLayer = L.featureGroup(textLabels);
-        textLabelsLayer.addTo(map);
-        togglePolygonLabels();
-        doubleClickPolylines();
-      });
-
-    } else if (!map.hasLayer(geoJsonLayer)) {
-      // Load every time after 'Off'
-      geoJsonLayer.addTo(map);
-      geoJsonLayer.setStyle(polygonStyle);
-      togglePolygonLabels();
-      doubleClickPolylines();
-    } else {
-      // Just update colors
-      geoJsonLayer.setStyle(polygonStyle);
-      doubleClickPolylines();
-    } */
-
     polygon = p;
     layer = z;
     allGeojsons[p].setStyle(polygonStyle);
@@ -611,6 +584,12 @@ $(window).on('load', function() {
 
     doubleClickPolylines();
 
+    // If no scale exists: hide the legend. Ugly temporary fix
+    if (allDivisors[p][z] == '') {
+      $('.polygons-legend' + p).find('.polygons-legend-scale').css({'margin': '0px', 'padding': '0px', 'border': '0px solid'});
+      return;
+    }
+
     $('.polygons-legend' + p + ' .polygons-legend-scale').html('');
 
     var labels = [];
@@ -618,7 +597,7 @@ $(window).on('load', function() {
 
     for (var i = 0; i < allDivisors[p][z].length; i++) {
       from = allDivisors[p][z][i];
-      to = allDivisors[p][z][i + 1];
+      to = allDivisors[p][z][i+1];
 
       labels.push(
         '<i style="background:' + getColor(from, p, z) + '; opacity: '
@@ -633,7 +612,21 @@ $(window).on('load', function() {
   /**
    * Generates CSS for each polygon in polygons
    */
+   // OPTIMIZE THIS UGLY FUNCTION LATER
   function polygonStyle(feature) {
+    if (feature.geometry.type == 'Point') {
+      return {
+        radius: 4,
+        weight: 1,
+        opacity: 1,
+        color: 'green',
+        //stroke: 'green',//getColor(feature.properties[allPolygonLayers[polygon][layer][0].trim()], polygon, layer),
+        //color: tryPolygonSetting(polygon, '_outlineColor', 'white'),
+        fillOpacity: 0.3,//tryPolygonSetting(polygon, '_colorOpacity', '0.7'),
+        fillColor: 'white'//getColor(feature.properties[allPolygonLayers[polygon][layer][0].trim()], polygon, layer)
+      };
+    }
+
     if (displayAllPolygons) {
       return {
         weight: 2,
@@ -645,6 +638,8 @@ $(window).on('load', function() {
       };
     }
 
+
+
     return {
       weight: 2,
       opacity: 1,
@@ -654,7 +649,6 @@ $(window).on('load', function() {
       fillColor: getColor(feature.properties[polygonLayers[pLayer][0].trim()])
     };
   }
-
 
   /**
    * Returns a color for polygon property with value d
