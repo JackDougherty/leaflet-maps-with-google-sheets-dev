@@ -4,8 +4,6 @@ $(window).on('load', function() {
 
   var polygonSettings = [];
   var polygonSheets = 1;
-  var polygon = 0;
-  var layer = 0;
   var polygonsLegend;
   var displayAllPolygons = true;
 
@@ -263,6 +261,9 @@ $(window).on('load', function() {
     return group;
   }
 
+  var polygon = 0; // current active polygon
+  var layer = 0; // number representing current layer among layers in legend
+
   /**
    * Store bucket info for Polygons
    */
@@ -274,7 +275,6 @@ $(window).on('load', function() {
   var geoJsonLayer;
   var textLabelsLayer;
   var textLabels = [];
-  var layer; // number representing current layer among layers in legend
 
   function processPolygons() {
     popupProperties = getPolygonSetting(polygon, '_popupProp').split(';');
@@ -417,10 +417,22 @@ $(window).on('load', function() {
   allPolygonLegends = [];
   allPolygonLayers = [];
 
+  allPopupProperties = [];
+  allTextLabelsLayers = [];
+  allTextLabels = [];
+
   function loadAllGeojsons(p) {
     if (p < polygonSettings.length && getPolygonSetting(p, '_polygonsGeojsonURL')) {
+      // Pre-process popup properties to be used in onEachFeature below
+      polygon = p;
+      popupProperties = getPolygonSetting(p, '_popupProp').split(';');
+      for (i in popupProperties) { popupProperties[i] = popupProperties[i].split(','); }
+      allPopupProperties.push(popupProperties);
+
+      // Load geojson
       $.getJSON(getPolygonSetting(p, '_polygonsGeojsonURL'), function(data) {
           geoJsonLayer = L.geoJson(data, {
+            onEachFeature: onEachFeature,
             pointToLayer: function(feature, latlng) {
               return L.circleMarker(latlng, {
                 className: 'geojson-point-marker'
@@ -443,10 +455,7 @@ $(window).on('load', function() {
       divisors = [];
       colors = [];
 
-      popupProperties = getPolygonSetting(p, '_popupProp').split(';');
       polygonLayers = getPolygonSetting(p, '_polygonLayers').split(';');
-
-      for (i in popupProperties) { popupProperties[i] = popupProperties[i].split(','); }
       for (i in polygonLayers) { polygonLayers[i] = polygonLayers[i].split(','); }
 
       divisors = getPolygonSetting(p, '_bucketDivisors').split(';');
@@ -573,6 +582,7 @@ $(window).on('load', function() {
     completePolygons = true;
   }
 
+
   function updatePolygonK(z, p) {
     polygon = p;
     layer = z;
@@ -670,17 +680,22 @@ $(window).on('load', function() {
    * Generates popup windows for every polygon
    */
   function onEachFeature(feature, layer) {
+    if (getPolygonSetting(polygon, '_popupProp') == ''
+     && getPolygonSetting(polygon, '_polygonDisplayImages') == 'off') return;
+
     var info = '';
+    var props = displayAllPolygons
+      ? allPopupProperties[polygon]
+      : popupProperties;
 
-    for (i in popupProperties) {
-      if (popupProperties[i] == '') {
-        continue;
-      }
-      info += popupProperties[i][1]
-        ? popupProperties[i][1].trim()
-        : popupProperties[i][0].trim();
+    for (i in props) {
+      if (props[i] == '') { continue; }
 
-      info += ': <b>' + feature.properties[popupProperties[i][0].trim()] + '</b><br>';
+      info += props[i][1]
+        ? props[i][1].trim()
+        : props[i][0].trim();
+
+      info += ': <b>' + feature.properties[props[i][0].trim()] + '</b><br>';
     }
 
     if (getPolygonSetting(polygon, '_polygonDisplayImages') == 'on') {
@@ -690,7 +705,7 @@ $(window).on('load', function() {
     }
 
     layer.bindPopup(info);
-
+    /*
     // Add polygon label if needed
     if (getPolygonSetting(polygon, '_polygonLabel') != '') {
       var myTextLabel = L.marker(polylabel(layer.feature.geometry.coordinates, 1.0).reverse(), {
@@ -700,7 +715,7 @@ $(window).on('load', function() {
         })
       });
       textLabels.push(myTextLabel);
-    }
+    }*/
   }
 
   /**
