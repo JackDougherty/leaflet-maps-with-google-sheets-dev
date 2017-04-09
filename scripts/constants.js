@@ -55,7 +55,7 @@ var constants = {
   _colorOpacity: 'Polygon Color Opacity',
   _outlineColor: 'Polygon Outline Color',
   _bucketColors: 'Property Range Manual Colors',
-  _polygonDisplayImages: 'Display Images When Available',
-  _polygonLabel: 'Display Polygon Labels at Zoom Level',
-  _polygonLabelMaxZoom: 'Maximum Zoom for Polygon Label',
+  _polygonDisplayImages: 'Show Images When Available',
+  _polygonLabel: 'Show Polygon Labels',
+  _polygonLabelZoomLevel: 'Show Polygon Labels at Zoom Level',
 };
