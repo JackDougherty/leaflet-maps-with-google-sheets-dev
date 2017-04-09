@@ -617,16 +617,24 @@ $(window).on('load', function() {
     $('.polygons-legend' + p + ' .polygons-legend-scale').html('');
 
     var labels = [];
-    var from, to;
+    var from, to, isNum, color;
 
     for (var i = 0; i < allDivisors[p][z].length; i++) {
+      isNum = allIsNumerical[p][z];
       from = allDivisors[p][z][i];
       to = allDivisors[p][z][i+1];
 
+      color = getColor(from);
+
+      if (isNum && from && to && getSetting('_displayCommasInNumbers') == 'true') {
+        from = comma(from);
+        to = comma(to);
+      }
+
       labels.push(
-        '<i style="background:' + getColor(from) + '; opacity: '
+        '<i style="background:' + color + '; opacity: '
         + tryPolygonSetting(p, '_colorOpacity', '0.7') + '"></i> ' +
-        from + ((to && allIsNumerical[p][z]) ? '&ndash;' + to : (allIsNumerical[p][z]) ? '+' : ''));
+        from + ((to && isNum) ? '&ndash;' + to : (isNum) ? '+' : ''));
     }
 
     $('.polygons-legend' + p + ' .polygons-legend-scale').html(labels.join('<br>'));
@@ -713,7 +721,12 @@ $(window).on('load', function() {
         ? props[i][1].trim()
         : props[i][0].trim();
 
-      info += ': <b>' + feature.properties[props[i][0].trim()] + '</b><br>';
+      var val = feature.properties[props[i][0].trim()];
+      if (val && getSetting('_displayCommasInNumbers')) {
+        val = comma(val);
+      }
+
+      info += ': <b>' + val + '</b><br>';
     }
 
     if (getPolygonSetting(polygon, '_polygonDisplayImages') == 'on') {
@@ -795,16 +808,24 @@ $(window).on('load', function() {
     }
 
     var labels = [];
-    var from, to;
+    var from, to, isNum, color;
 
     for (var i = 0; i < divisors[z].length; i++) {
+      isNum = isNumerical[z];
       from = divisors[z][i];
       to = divisors[z][i + 1];
 
+      color = getColor(from);
+
+      if (isNum && from && to && getSetting('_displayCommasInNumbers') == 'true') {
+        from = comma(from);
+        to = comma(to);
+      }
+
       labels.push(
-        '<i style="background:' + getColor(from) + '; opacity: '
+        '<i style="background:' + color + '; opacity: '
         + tryPolygonSetting(polygon, '_colorOpacity', '0.7') + '"></i> ' +
-        from + ((to && isNumerical[z]) ? '&ndash;' + to : (isNumerical[z]) ? '+' : ''));
+        from + ((to && isNum) ? '&ndash;' + to : (isNum) ? '+' : ''));
     }
 
     $('.polygons-legend-scale').html(labels.join('<br>'));
@@ -1200,6 +1221,15 @@ $(window).on('load', function() {
       p[setting.Setting] = setting.Customize;
     }
     polygonSettings.push(p);
+  }
+
+  // Returns a string that contains digits of val split by comma evey 3 positions
+  // Example: 12345678 -> "12,345,678"
+  function comma(val) {
+      while (/(\d+)(\d{3})/.test(val.toString())) {
+          val = val.toString().replace(/(\d+)(\d{3})/, '$1' + ',' + '$2');
+      }
+      return val;
   }
 
 });
