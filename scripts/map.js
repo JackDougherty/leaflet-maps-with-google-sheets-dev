@@ -549,16 +549,26 @@ $(window).on('load', function() {
           $('.polygons-legend' + polygonNumber).find('.polygons-legend-scale').hide();
           if (map.hasLayer(allGeojsons[polygonNumber])) {
             map.removeLayer(allGeojsons[polygonNumber]);
+            if (map.hasLayer(allTextLabelsLayers[polygonNumber])) {
+              map.removeLayer(allTextLabelsLayers[polygonNumber]);
+            }
           }
         } else {
           updatePolygonK(layerNumber, polygonNumber);
         }
       });
 
-      //togglePolygonLabels();
-
       p++;
     }
+
+    // Generate polygon labels layers
+    for (i in allTextLabels) {
+      var g = L.featureGroup(allTextLabels[i]);
+      allTextLabelsLayers.push(g);
+      g.addTo(map);
+    }
+    togglePolygonLabels();
+
 
     $('.polygons-legend-merged h6').click(function() {
       if ($(this).parent().find('form').is(':visible')) {
@@ -590,11 +600,15 @@ $(window).on('load', function() {
 
     if (!map.hasLayer(allGeojsons[p])) {
       map.addLayer(allGeojsons[p]);
+      if (!map.hasLayer(allTextLabelsLayers[p]) && allTextLabelsLayers[p]) {
+        map.addLayer(allTextLabelsLayers[p]);
+      }
     }
 
     doubleClickPolylines();
 
-    // If no scale exists: hide the legend. Ugly temporary fix
+    // If no scale exists: hide the legend. Ugly temporary fix.
+    // Can't use 'hide' because it is later toggled
     if (allDivisors[p][z] == '') {
       $('.polygons-legend' + p).find('.polygons-legend-scale').css({'margin': '0px', 'padding': '0px', 'border': '0px solid'});
       return;
@@ -617,6 +631,8 @@ $(window).on('load', function() {
 
     $('.polygons-legend' + p + ' .polygons-legend-scale').html(labels.join('<br>'));
     $('.polygons-legend' + p + ' .polygons-legend-scale').show();
+
+    togglePolygonLabels();
   }
 
   /**
@@ -680,6 +696,8 @@ $(window).on('load', function() {
    * Generates popup windows for every polygon
    */
   function onEachFeature(feature, layer) {
+    // Do not bind popups if 1. no popup properties specified and 2. display
+    // images is turned off.
     if (getPolygonSetting(polygon, '_popupProp') == ''
      && getPolygonSetting(polygon, '_polygonDisplayImages') == 'off') return;
 
@@ -705,17 +723,20 @@ $(window).on('load', function() {
     }
 
     layer.bindPopup(info);
-    /*
+
     // Add polygon label if needed
     if (getPolygonSetting(polygon, '_polygonLabel') != '') {
       var myTextLabel = L.marker(polylabel(layer.feature.geometry.coordinates, 1.0).reverse(), {
         icon: L.divIcon({
-          className: 'polygon-label',
+          className: 'polygon-label' + polygon + ' polygon-label',
           html: feature.properties[getPolygonSetting(polygon, '_polygonLabel')],
         })
       });
       textLabels.push(myTextLabel);
-    }*/
+
+      if (!allTextLabels[polygon]) {allTextLabels.push([]);}
+      allTextLabels[polygon].push(myTextLabel);
+    }
   }
 
   /**
@@ -1047,11 +1068,13 @@ $(window).on('load', function() {
    * Turns on and off polygon text labels depending on current map zoom
    */
   function togglePolygonLabels() {
-    if (map.getZoom() <= tryPolygonSetting(polygon, '_polygonLabelMaxZoom', 9)) {
-      $('.polygon-label').hide();
-    } else {
-      if ($('input[name=prop]:checked').val() != '-1') {
-        $('.polygon-label').show();
+    for (i in allTextLabels) {
+      if (map.getZoom() <= tryPolygonSetting(i, '_polygonLabelMaxZoom', 9)) {
+        $('.polygon-label' + i).hide();
+      } else {
+        if ($('.polygons-legend' + i + ' input[name=prop]:checked').val() != '-1') {
+          $('.polygon-label' + i).show();
+        }
       }
     }
   }
