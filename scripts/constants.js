@@ -22,6 +22,7 @@ var constants = {
   _initLat: 'Initial Center Latitude',
   _initLon: 'Initial Center Longitude',
   _displayAllPolygons: 'Display Polygons Simultaneously',
+  _displayCommasInNumbers: 'Display Commas in Numbers',
 	// Map Controls
 	_mapSearch: 'Search Button',
   _mapSearchKey: 'Mapzen Search Key',

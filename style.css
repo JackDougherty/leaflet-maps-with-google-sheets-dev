@@ -75,6 +75,9 @@ form {
   margin: 5px 0 5px 0;
 }
 
+.geojson-point-marker {
+  radius: 3;
+}
 
 .loader,
 .loader:before,
