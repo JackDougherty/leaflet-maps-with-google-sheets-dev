@@ -251,3 +251,12 @@ select {
   font-size: 1.2em;
   font-weight: bold;
 }
+
+.div-center {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  padding-top: 10px;
+}

@@ -969,12 +969,11 @@ $(window).on('load', function() {
       var title = '<h3 class="pointer">' + getSetting('_mapTitle') + '</h3>';
       var subtitle = '<h5>' + getSetting('_mapSubtitle') + '</h5>';
 
-      if (dispTitle == 'on') {
+      if (dispTitle == 'topleft') {
         $('div.leaflet-top').prepend('<div class="map-title leaflet-bar leaflet-control leaflet-control-custom">' + title + subtitle + '</div>');
-      } else if (dispTitle == 'in points legend') {
-        $('#points-legend').prepend(title + subtitle);
-      } else if (dispTitle == 'in polygons legend') {
-        $('.polygons-legend').prepend(title + subtitle);
+      } else if (dispTitle == 'topcenter') {
+        $('#map').append('<div class="div-center"></div>');
+        $('.div-center').append('<div class="map-title leaflet-bar leaflet-control leaflet-control-custom">' + title + subtitle + '</div>');
       }
 
       $('.map-title h3').click(function() { location.reload(); });
