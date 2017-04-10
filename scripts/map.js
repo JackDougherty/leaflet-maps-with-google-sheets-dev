@@ -5,7 +5,6 @@ $(window).on('load', function() {
   var polygonSettings = [];
   var polygonSheets = 1;
   var polygonsLegend;
-  var displayAllPolygons = true;
 
   var completePoints = false;
   var completePolygons = false;
@@ -171,15 +170,18 @@ $(window).on('load', function() {
       });
 
       if (getSetting('_pointsLegendPos') !== 'off') {
+        //console.log(pointsLegend)
         pointsLegend.addTo(map);
         pointsLegend._container.id = 'points-legend';
+        pointsLegend._container.className += ' ladder';
       }
     }
 
     $('#points-legend').prepend('<h6 class="pointer">' + getSetting('_pointsLegendTitle') + '</h6>');
-    $('#points-legend h6').click(function() {
-      $('#points-legend form').toggle();
-    });
+    if (getSetting('_pointsLegendIcon') != '') {
+      $('#points-legend h6').prepend('<span class="legend-icon"><i class="fa '
+        + getSetting('_pointsLegendIcon') + '"></i></span>');
+    }
 
     var displayTable = getSetting('_displayTable') == 'on' ? true : false;
 
@@ -267,156 +269,12 @@ $(window).on('load', function() {
   /**
    * Store bucket info for Polygons
    */
-  var popupProperties = []; // properties to be shown in popup window
-  var polygonLayers = []; // GeoJSON layers
-  var divisors = [];  // sets of divisors
-  var colors = [];  // sets of colors
-  var isNumerical = []; // array of true/false values for each set
-  var geoJsonLayer;
-  var textLabelsLayer;
-  var textLabels = [];
-
-  function processPolygons() {
-    popupProperties = getPolygonSetting(polygon, '_popupProp').split(';');
-    polygonLayers = getPolygonSetting(polygon, '_polygonLayers').split(';');
-
-    for (i in popupProperties) {
-      popupProperties[i] = popupProperties[i].split(',');
-    }
-
-    for (i in polygonLayers) {
-      polygonLayers[i] = polygonLayers[i].split(',');
-    }
-
-    divisors = getPolygonSetting(polygon, '_bucketDivisors').split(';');
-
-    if (divisors.length != polygonLayers.length) {
-      alert('Error in Polygons: The number of sets of divisors has to match the number of properties');
-      return;
-    }
-
-    colors = getPolygonSetting(polygon, '_bucketColors').split(';');
-    for (i = 0; i < divisors.length; i++) {
-      divisors[i] = divisors[i].split(',');
-      for (j = 0; j < divisors[i].length; j++) {
-        divisors[i][j] = divisors[i][j].trim();
-      }
-      if (!colors[i]) {
-        colors[i] = [];
-      } else {
-        colors[i] = colors[i].split(',');
-      }
-    }
-
-    for (i = 0; i < divisors.length; i++) {
-      if (divisors[i].length == 0) {
-        alert('Error in Polygons: The number of divisors should be > 0');
-        return; // Stop here
-      } else if (colors[i].length == 0) {
-        // If no colors specified, generate the colors
-        colors[i] = palette(tryPolygonSetting(polygon, '_colorScheme', 'tol-sq'), divisors[i].length);
-        for (j = 0; j < colors[i].length; j++) {
-          colors[i][j] = '#' + colors[i][j].trim();
-        }
-      } else if (divisors[i].length != colors[i].length) {
-        alert('Error in Polygons: The number of divisors should match the number of colors');
-        return; // Stop here
-      }
-    }
-
-    // For each set of divisors, decide whether textual or numerical
-    for (i = 0; i < divisors.length; i++) {
-      if (!isNaN(parseFloat(divisors[i][0].trim()))) {
-        isNumerical[i] = true;
-        for (j = 0; j < divisors[i].length; j++) {
-          divisors[i][j] = parseFloat(divisors[i][j].trim());
-        }
-      } else {
-        isNumerical[i] = false;
-      }
-    }
-
-    var legendPos = tryPolygonSetting(polygon, '_polygonsLegendPosition', 'off');
-    polygonsLegend = L.control({position: (legendPos == 'off') ? 'topleft' : legendPos});
-
-    polygonsLegend.onAdd = function(map) {
-      var content = '<h6 class="pointer">' + getPolygonSetting(polygon, '_polygonsLegendTitle') + '</h6>';
-
-      if (polygonSheets > 1) {
-        content += '<select id="polygonSelect">';
-        for (i = 0; i < polygonSheets; i++) {
-          var title = getPolygonSetting(i, '_polygonsGeojsonName');
-          if (title == '') {title = 'Polygon ' + i}
-          content += '<option value=' + i + ((i == polygon) ? ' selected' : '') + '>' + title + '</option>';
-        }
-        content += '</select>';
-      }
-
-      content += '<form>';
-
-      for (i in polygonLayers) {
-        var layer = polygonLayers[i][1]
-          ? polygonLayers[i][1].trim()
-          : polygonLayers[i][0].trim();
-
-        layer = (layer == '') ? 'On' : layer;
-
-        content += '<label><input type="radio" name="prop" value="' + i + '"> ';
-        content += layer + '</label><br>';
-      }
-
-      content += '<label><input type="radio" name="prop" value="-1"> Off</label></form><div class="polygons-legend-scale">';
-
-      var div = L.DomUtil.create('div', 'leaflet-control leaflet-control-custom leaflet-bar polygons-legend');
-      div.innerHTML = content;
-      div.innerHTML += '</div>';
-      return div;
-    };
-
-    polygonsLegend.addTo(map);
-
-    $('#polygonSelect').change(function() {
-      map.removeControl(polygonsLegend);
-      if (map.hasLayer(geoJsonLayer)) {
-        map.removeLayer(geoJsonLayer);
-      }
-      geoJsonLayer = null;
-      polygon = parseInt($(this).val());
-      processPolygons();
-    });
-
-    $('.polygons-legend h6').click(function() {
-      if ($('input[name=prop]:checked').val() != '-1') {
-        $(this).siblings().toggle();
-      } else {
-        $('.polygons-legend>form').toggle();
-      }
-    });
-
-    // This is triggered both when user changes the radio button
-    // or #polygonSelect changes the geojson displayed
-    $('input:radio[name="prop"]').change(function() {
-      updatePolygons($(this).val());
-    });
-
-    $('input:radio[name="prop"][value="0"]').click();
-    togglePolygonLabels();
-
-    if (legendPos == 'off') {
-      $('.polygons-legend').hide();
-    }
-
-    completePolygons = true;
-  }
-
-
   allDivisors = [];
   allColors = [];
   allIsNumerical = [];
   allGeojsons = [];
   allPolygonLegends = [];
   allPolygonLayers = [];
-
   allPopupProperties = [];
   allTextLabelsLayers = [];
   allTextLabels = [];
@@ -425,7 +283,7 @@ $(window).on('load', function() {
     if (p < polygonSettings.length && getPolygonSetting(p, '_polygonsGeojsonURL')) {
       // Pre-process popup properties to be used in onEachFeature below
       polygon = p;
-      popupProperties = getPolygonSetting(p, '_popupProp').split(';');
+      var popupProperties = getPolygonSetting(p, '_popupProp').split(';');
       for (i in popupProperties) { popupProperties[i] = popupProperties[i].split(','); }
       allPopupProperties.push(popupProperties);
 
@@ -515,7 +373,7 @@ $(window).on('load', function() {
       polygonsLegend = L.control({position: (legendPos == 'off') ? 'topleft' : legendPos});
 
       polygonsLegend.onAdd = function(map) {
-        var content = '<h6 class="pointer">' + getPolygonSetting(p, '_polygonsGeojsonName') + '</h6>';
+        var content = '<h6 class="pointer">' + getPolygonSetting(p, '_polygonsLegendTitle') + '</h6>';
         content += '<form>';
 
         for (i in polygonLayers) {
@@ -531,7 +389,7 @@ $(window).on('load', function() {
 
         content += '<label><input type="radio" name="prop" value="' + p + ';-1"> Off</label></form><div class="polygons-legend-scale">';
 
-        var div = L.DomUtil.create('div', 'leaflet-control leaflet-control-custom leaflet-bar polygons-legend-merged polygons-legend' + p);
+        var div = L.DomUtil.create('div', 'leaflet-control leaflet-control-custom leaflet-bar ladder polygons-legend' + p);
         div.innerHTML = content;
         div.innerHTML += '</div>';
         return div;
@@ -542,19 +400,19 @@ $(window).on('load', function() {
 
       // This is triggered when user changes the radio button
       $('.polygons-legend' + p + ' input:radio[name="prop"]').change(function() {
-        var polygonNumber = parseInt($(this).val().split(';')[0]);
-        var layerNumber = parseInt($(this).val().split(';')[1]);
+        polygon = parseInt($(this).val().split(';')[0]);
+        layer = parseInt($(this).val().split(';')[1]);
 
-        if (layerNumber == -1) {
-          $('.polygons-legend' + polygonNumber).find('.polygons-legend-scale').hide();
-          if (map.hasLayer(allGeojsons[polygonNumber])) {
-            map.removeLayer(allGeojsons[polygonNumber]);
-            if (map.hasLayer(allTextLabelsLayers[polygonNumber])) {
-              map.removeLayer(allTextLabelsLayers[polygonNumber]);
+        if (layer == -1) {
+          $('.polygons-legend' + polygon).find('.polygons-legend-scale').hide();
+          if (map.hasLayer(allGeojsons[polygon])) {
+            map.removeLayer(allGeojsons[polygon]);
+            if (map.hasLayer(allTextLabelsLayers[polygon])) {
+              map.removeLayer(allTextLabelsLayers[polygon]);
             }
           }
         } else {
-          updatePolygonK(layerNumber, polygonNumber);
+          updatePolygons();
         }
       });
 
@@ -569,22 +427,13 @@ $(window).on('load', function() {
     }
     togglePolygonLabels();
 
-
-    $('.polygons-legend-merged h6').click(function() {
-      if ($(this).parent().find('form').is(':visible')) {
-        $(this).siblings().hide();
-      } else {
-        $('.polygons-legend-merged form, .polygons-legend-merged div').hide();
-        if ($(this).parent().find('input[name=prop]:checked').val().split(';')[1] != '-1') {
-          $(this).siblings().toggle();
-        } else {
-          $(this).parent().find('form').toggle();
-        }
-      }
-    });
-
     for (t = 0; t < p; t++) {
-      $('.polygons-legend-merged input:radio[name="prop"][value="' + t + ';0"]').click();
+      if (getPolygonSetting(t, '_polygonShowOnStart') == 'on') {
+        $('.ladder input:radio[name="prop"][value="' + t + ';0"]').click();
+      } else {
+        $('.ladder input:radio[name="prop"][value="' + t + ';-1"]').click();
+      }
+
     }
 
     $('.polygons-legend-merged h6').eq(0).click().click();
@@ -593,9 +442,9 @@ $(window).on('load', function() {
   }
 
 
-  function updatePolygonK(z, p) {
-    polygon = p;
-    layer = z;
+  function updatePolygons() {
+    p = polygon;
+    z = layer;
     allGeojsons[p].setStyle(polygonStyle);
 
     if (!map.hasLayer(allGeojsons[p])) {
@@ -625,11 +474,8 @@ $(window).on('load', function() {
       to = allDivisors[p][z][i+1];
 
       color = getColor(from);
-
-      if (isNum && from && to && getSetting('_displayCommasInNumbers') == 'true') {
-        from = comma(from);
-        to = comma(to);
-      }
+      from = from ? comma(from) : from;
+      to = to ? comma(to) : to;
 
       labels.push(
         '<i style="background:' + color + '; opacity: '
@@ -647,15 +493,12 @@ $(window).on('load', function() {
    * Generates CSS for each geojson feature
    */
   function polygonStyle(feature) {
-    var value = displayAllPolygons
-      ? feature.properties[allPolygonLayers[polygon][layer][0].trim()]
-      : feature.properties[polygonLayers[layer][0].trim()];
+    var value = feature.properties[allPolygonLayers[polygon][layer][0].trim()];
 
     var style = {};
 
     if (feature.geometry.type == 'Point') {
-      // Point style
-      return {
+      return {  // Point style
         radius: 4,
         weight: 1,
         opacity: 1,
@@ -664,8 +507,7 @@ $(window).on('load', function() {
         fillColor: 'white'
       }
     } else {
-      // Polygon and Polyline style
-      return {
+      return {  // Polygon and Polyline style
         weight: 2,
         opacity: 1,
         color: tryPolygonSetting(polygon, '_outlineColor', 'white'),
@@ -680,9 +522,9 @@ $(window).on('load', function() {
    * Returns a color for polygon property with value d
    */
   function getColor(d) {
-    var num = displayAllPolygons ? allIsNumerical[polygon][layer] : isNumerical[layer];
-    var col = displayAllPolygons ? allColors[polygon][layer] : colors[layer];
-    var div = displayAllPolygons ? allDivisors[polygon][layer] : divisors[layer];
+    var num = allIsNumerical[polygon][layer];
+    var col = allColors[polygon][layer];
+    var div = allDivisors[polygon][layer];
 
     var i;
 
@@ -710,9 +552,7 @@ $(window).on('load', function() {
      && getPolygonSetting(polygon, '_polygonDisplayImages') == 'off') return;
 
     var info = '';
-    var props = displayAllPolygons
-      ? allPopupProperties[polygon]
-      : popupProperties;
+    props = allPopupProperties[polygon];
 
     for (i in props) {
       if (props[i] == '') { continue; }
@@ -722,11 +562,7 @@ $(window).on('load', function() {
         : props[i][0].trim();
 
       var val = feature.properties[props[i][0].trim()];
-      if (val && getSetting('_displayCommasInNumbers')) {
-        val = comma(val);
-      }
-
-      info += ': <b>' + val + '</b><br>';
+      info += ': <b>' + (val ? comma(val) : val) + '</b><br>';
     }
 
     if (getPolygonSetting(polygon, '_polygonDisplayImages') == 'on') {
@@ -745,91 +581,10 @@ $(window).on('load', function() {
           html: feature.properties[getPolygonSetting(polygon, '_polygonLabel')],
         })
       });
-      textLabels.push(myTextLabel);
 
       if (!allTextLabels[polygon]) {allTextLabels.push([]);}
       allTextLabels[polygon].push(myTextLabel);
     }
-  }
-
-  /**
-   * Refreshes polygons so they reflect a specified layer z (radio buttons)
-   */
-  function updatePolygons(z) {
-    if (z == '-1') {
-      $('.polygons-legend-scale').hide();
-      map.removeLayer(geoJsonLayer);
-      $('.polygon-label').hide();
-      return;
-    }
-
-    layer = z;
-
-    if (!geoJsonLayer) {
-      textLabels = [];
-      if (textLabelsLayer && map.hasLayer(textLabelsLayer)) {
-        map.removeLayer(textLabelsLayer);
-      }
-      // Load the very first time polygons-sample.geojson
-      $.getJSON(getPolygonSetting(polygon, '_polygonsGeojsonURL'), function(data) {
-        geoJsonLayer = L.geoJson(data, {
-          style: polygonStyle,
-          onEachFeature: onEachFeature,
-          pointToLayer: function(feature, latlng) {
-            return L.circleMarker(latlng, {
-              className: 'geojson-point-marker'
-            });
-          }
-        }).addTo(map);
-        textLabelsLayer = L.featureGroup(textLabels);
-        textLabelsLayer.addTo(map);
-        togglePolygonLabels();
-        doubleClickPolylines();
-      });
-    } else if (!map.hasLayer(geoJsonLayer)) {
-      // Load every time after 'Off'
-      geoJsonLayer.addTo(map);
-      geoJsonLayer.setStyle(polygonStyle);
-      togglePolygonLabels();
-      doubleClickPolylines();
-    } else {
-      // Just update colors
-      geoJsonLayer.setStyle(polygonStyle);
-      doubleClickPolylines();
-    }
-
-    $('.polygons-legend-scale').html('');
-
-
-    // If no scale exists: hide the legend. Ugly temporary fix
-    if (divisors[z] == '') {
-      $('.polygons-legend').find('.polygons-legend-scale').css({'margin': '0px', 'padding': '0px', 'border': '0px solid'});
-      return;
-    }
-
-    var labels = [];
-    var from, to, isNum, color;
-
-    for (var i = 0; i < divisors[z].length; i++) {
-      isNum = isNumerical[z];
-      from = divisors[z][i];
-      to = divisors[z][i + 1];
-
-      color = getColor(from);
-
-      if (isNum && from && to && getSetting('_displayCommasInNumbers') == 'true') {
-        from = comma(from);
-        to = comma(to);
-      }
-
-      labels.push(
-        '<i style="background:' + color + '; opacity: '
-        + tryPolygonSetting(polygon, '_colorOpacity', '0.7') + '"></i> ' +
-        from + ((to && isNum) ? '&ndash;' + to : (isNum) ? '+' : ''));
-    }
-
-    $('.polygons-legend-scale').html(labels.join('<br>'));
-    $('.polygons-legend-scale').show();
   }
 
   /**
@@ -882,14 +637,8 @@ $(window).on('load', function() {
     }
 
     // Add polygons
-    displayAllPolygons = getSetting('_displayAllPolygons') === 'true' ? true : false;
-
     if (getPolygonSetting(0, '_polygonsGeojsonURL')) {
-      if (displayAllPolygons) {
-        loadAllGeojsons(0);
-      } else {
-        processPolygons();
-      }
+      loadAllGeojsons(0);
     } else {
       completePolygons = true;
     }
@@ -944,6 +693,34 @@ $(window).on('load', function() {
 
     function showMap() {
       if (completePoints && completePolylines && completePolygons) {
+        $('.ladder h6').append('<span class="legend-arrow"><i class="fa fa-chevron-down"></i></span>');
+        $('.ladder h6').addClass('minimize');
+
+        for (i in allPolygonLegends) {
+          if (getPolygonSetting(i, '_polygonsLegendIcon') != '') {
+            $('.polygons-legend' + i + ' h6').prepend(
+              '<span class="legend-icon"><i class="fa ' + getPolygonSetting(i, '_polygonsLegendIcon') + '"></i></span>');
+          }
+        }
+
+        $('.ladder h6').click(function() {
+          if ($(this).hasClass('minimize')) {
+            $('.ladder h6').addClass('minimize');
+            $('.legend-arrow i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+            $(this).removeClass('minimize')
+              .parent().find('.legend-arrow i')
+              .removeClass('fa-chevron-down')
+              .addClass('fa-chevron-up');
+          } else {
+            $(this).addClass('minimize');
+            $(this).parent().find('.legend-arrow i')
+              .removeClass('fa-chevron-up')
+              .addClass('fa-chevron-down');
+          }
+        });
+
+        $('.ladder h6').get(0).click();
+
         $('#map').css('visibility', 'visible');
         $('.loader').hide();
 
@@ -977,10 +754,6 @@ $(window).on('load', function() {
       }
 
       $('.map-title h3').click(function() { location.reload(); });
-
-      // If set to be displayed in polylines legend, this happens in
-      // processPolylines() as <div> for the legend is created later, after the
-      // first polyline geojson is processed.
     }
   }
 
@@ -1035,9 +808,14 @@ $(window).on('load', function() {
 
           if (index == 0) {
             polylinesLegend._container.id = 'polylines-legend';
+            polylinesLegend._container.className += ' ladder';
 
             if (getSetting('_polylinesLegendTitle') != '') {
               $('#polylines-legend').prepend('<h6 class="pointer">' + getSetting('_polylinesLegendTitle') + '</h6>');
+              if (getSetting('_polylinesLegendIcon') != '') {
+                $('#polylines-legend h6').prepend('<span class="legend-icon"><i class="fa '
+                  + getSetting('_polylinesLegendIcon') + '"></i></span>');
+              }
 
               // Add map title if set to be displayed in polylines legend
               if (getSetting('_mapTitleDisplay') == 'in polylines legend') {
@@ -1045,10 +823,6 @@ $(window).on('load', function() {
                 var subtitle = '<h6>' + getSetting('_mapSubtitle') + '</h6>';
                 $('#polylines-legend').prepend(title + subtitle);
               }
-
-              $('#polylines-legend h6').click(function() {
-                $('#polylines-legend>form').toggle();
-              });
             }
           }
 
