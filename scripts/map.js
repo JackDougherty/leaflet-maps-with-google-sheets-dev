@@ -27,7 +27,7 @@ $(window).on('load', function() {
    * Sets the map view so that all markers are visible, or
    * to specified (lat, lon) and zoom if all three are specified
    */
-  function centerAndZoomMap(points) {
+  function centerAndZoomMap(bounds) {
     var lat = map.getCenter().lat, latSet = false;
     var lon = map.getCenter().lng, lonSet = false;
     var zoom = 12, zoomSet = false;
@@ -48,14 +48,14 @@ $(window).on('load', function() {
       zoomSet = true;
     }
 
-    if ((latSet && lonSet) || !points) {
+    if ((latSet && lonSet) || !bounds) {
       center = L.latLng(lat, lon);
     } else {
-      center = points.getBounds().getCenter();
+      center = bounds.getCenter();
     }
 
-    if (!zoomSet && points) {
-      zoom = map.getBoundsZoom(points.getBounds());
+    if (!zoomSet && bounds) {
+      zoom = map.getBoundsZoom(bounds);
     }
 
     map.setView(center, zoom);
@@ -97,7 +97,7 @@ $(window).on('load', function() {
   /**
    * Assigns points to appropriate layers and clusters them if needed
    */
-  function mapPoints(points, layers) {
+  function mapPoints(points, layers, index, legendTitle, legendIcon) {
     var markerArray = [];
     // check that map has loaded before adding points to it?
     for (var i in points) {
@@ -107,8 +107,8 @@ $(window).on('load', function() {
       // otherwise create a Font Awesome icon
       var iconSize = point['Custom Size'];
       var size = (iconSize.indexOf('x') > 0)
-      ? [parseInt(iconSize.split('x')[0]), parseInt(iconSize.split('x')[1])]
-      : [32, 32];
+        ? [parseInt(iconSize.split('x')[0]), parseInt(iconSize.split('x')[1])]
+        : [32, 32];
 
       var anchor = [size[0] / 2, size[1]];
 
@@ -170,17 +170,16 @@ $(window).on('load', function() {
       });
 
       if (getSetting('_pointsLegendPos') !== 'off') {
-        //console.log(pointsLegend)
         pointsLegend.addTo(map);
-        pointsLegend._container.id = 'points-legend';
-        pointsLegend._container.className += ' ladder';
+        pointsLegend._container.id = 'points-legend' + index;
+        pointsLegend._container.className += ' ladder points-legend';
       }
     }
 
-    $('#points-legend').prepend('<h6 class="pointer">' + getSetting('_pointsLegendTitle') + '</h6>');
-    if (getSetting('_pointsLegendIcon') != '') {
-      $('#points-legend h6').prepend('<span class="legend-icon"><i class="fa '
-        + getSetting('_pointsLegendIcon') + '"></i></span>');
+    $('#points-legend' + index).prepend('<h6 class="pointer">' + legendTitle + '</h6>');
+    if (legendIcon) {
+      $('#points-legend' + index + ' h6').prepend('<span class="legend-icon"><i class="fa '
+        + legendIcon + '"></i></span>');
     }
 
     var displayTable = getSetting('_displayTable') == 'on' ? true : false;
@@ -613,17 +612,29 @@ $(window).on('load', function() {
     addBaseMap();
 
     // Add point markers to the map
-    var points = mapData.sheets(constants.pointsSheetName).elements;
-    var layers;
-    var group = '';
-    if (points.length > 0) {
-      layers = determineLayers(points);
-      group = mapPoints(points, layers);
-    } else {
-      completePoints = true;
+    var bounds = L.latLngBounds();
+    var index = 0;
+
+    for (sheet in mapData.sheets()) {
+      if (sheet.split('-').pop() == constants.pointsSheetName) {
+        var points = mapData.sheets(sheet).elements;
+        if (points.length > 0) {
+          layers = determineLayers(points);
+          legendIcon = (sheet.indexOf('(fa-') == 0) && (sheet.indexOf(')') > 4)
+            ? sheet.slice(1, sheet.indexOf(')'))
+            : '';
+
+          sheet = (legendIcon == '') ? sheet : sheet.slice(sheet.indexOf(')') + 1);
+          legendTitle = sheet.slice(0, sheet.lastIndexOf('-') == -1 ? sheet.length : sheet.lastIndexOf('-')).trim();
+
+          group = mapPoints(points, layers, index++, legendTitle, legendIcon);
+          bounds = bounds.extend(group.getBounds());
+        }
+      }
     }
 
-    centerAndZoomMap(group);
+    completePoints = true;
+    centerAndZoomMap(bounds);
 
     // Add polylines
     var polylines = mapData.sheets(constants.polylinesSheetName).elements;
@@ -676,7 +687,7 @@ $(window).on('load', function() {
     changeAttribution();
 
     // Append icons to categories in markers legend
-    $('#points-legend form label span').each(function(i) {
+    $('.ladder.points-legend form label span').each(function(i) {
       var legendIcon = (markerColors[i].indexOf('.') > 0)
         ? '<img src="' + markerColors[i] + '" class="markers-legend-icon">'
         : '&nbsp;<i class="fa fa-map-marker" style="color: '
