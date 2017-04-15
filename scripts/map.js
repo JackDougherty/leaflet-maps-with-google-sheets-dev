@@ -1,6 +1,7 @@
 $(window).on('load', function() {
   var documentSettings = {};
   var markerColors = [];
+  var markerLayersShowOnStart = [];
 
   var polygonSettings = [];
   var polygonSheets = 1;
@@ -77,12 +78,13 @@ $(window).on('load', function() {
           ? points[i]['Marker Icon']
           : points[i]['Marker Color']
         );
+        markerLayersShowOnStart.push(points[i]['Show on Start'] === 'off' ? false : true);
         layerNamesFromSpreadsheet.push(pointLayerNameFromSpreadsheet);
       }
     }
 
-    // if none of the points have named layers or if there was only one name, return no layers
-    if (layerNamesFromSpreadsheet.length === 1) {
+    // If none of the points have named layers, return undefined
+    if (layerNamesFromSpreadsheet.length === 0) {
       layers = undefined;
     } else {
       for (var i in layerNamesFromSpreadsheet) {
@@ -99,7 +101,7 @@ $(window).on('load', function() {
    */
   function mapPoints(points, layers, index, legendTitle, legendIcon) {
     var markerArray = [];
-    // check that map has loaded before adding points to it?
+
     for (var i in points) {
       var point = points[i];
 
@@ -168,6 +170,7 @@ $(window).on('load', function() {
         collapsed: false,
         position: pos,
       });
+      console.log(markerLayersShowOnStart);
 
       if (getSetting('_pointsLegendPos') !== 'off') {
         pointsLegend.addTo(map);
@@ -701,8 +704,16 @@ $(window).on('load', function() {
 
     function showMap() {
       if (completePoints && completePolylines && completePolygons) {
+        // Add Font-Awesome down arrows to the right of each legend title
         $('.ladder h6').append('<span class="legend-arrow"><i class="fa fa-chevron-down"></i></span>');
         $('.ladder h6').addClass('minimize');
+
+        // Turn off point layers which should be hidden from start
+        for (i in markerLayersShowOnStart) {
+          if (!markerLayersShowOnStart[i]) {
+            $('.points-legend input[type=checkbox]').get(i).click();
+          }
+        }
 
         for (i in allPolygonLegends) {
           if (getPolygonSetting(i, '_polygonsLegendIcon') != '') {
