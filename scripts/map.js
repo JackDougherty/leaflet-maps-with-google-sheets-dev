@@ -4,7 +4,7 @@ $(window).on('load', function() {
   var markerLayersShowOnStart = [];
 
   var polygonSettings = [];
-  var polygonSheets = 1;
+  var polygonSheets = 0;
   var polygonsLegend;
 
   var completePoints = false;
@@ -170,7 +170,6 @@ $(window).on('load', function() {
         collapsed: false,
         position: pos,
       });
-      console.log(markerLayersShowOnStart);
 
       if (getSetting('_pointsLegendPos') !== 'off') {
         pointsLegend.addTo(map);
@@ -603,14 +602,6 @@ $(window).on('load', function() {
     var options = mapData.sheets(constants.optionsSheetName).elements;
     createDocumentSettings(options);
 
-    createPolygonSettings(mapData.sheets(constants.polygonsSheetName).elements);
-    i = 1;
-    while (mapData.sheets(constants.polygonsSheetName + i)) {
-      createPolygonSettings(mapData.sheets(constants.polygonsSheetName + i).elements);
-      i++;
-      polygonSheets++;
-    }
-
     document.title = getSetting('_mapTitle');
     addBaseMap();
 
@@ -618,21 +609,36 @@ $(window).on('load', function() {
     var bounds = L.latLngBounds();
     var index = 0;
 
+    // Going through all sheets
     for (sheet in mapData.sheets()) {
-      if (sheet.split('-').pop() == constants.pointsSheetName) {
-        var points = mapData.sheets(sheet).elements;
-        if (points.length > 0) {
-          layers = determineLayers(points);
-          legendIcon = (sheet.indexOf('(fa-') == 0) && (sheet.indexOf(')') > 4)
-            ? sheet.slice(1, sheet.indexOf(')'))
-            : '';
+      var icon = '';
+      var title = sheet;
+      // Regex for Font Awesome icon name in paranthesis: (fa-icon-o)
+      if (sheet.match(/\(fa\-[0-9a-z\-]*\)/)) {
+        icon = sheet.match(/\(fa\-[0-9a-z\-]*\)/)[0].slice(1, -1);
+        title = sheet.split(')')[1];
+      }
 
-          sheet = (legendIcon == '') ? sheet : sheet.slice(sheet.indexOf(')') + 1);
-          legendTitle = sheet.slice(0, sheet.lastIndexOf('-') == -1 ? sheet.length : sheet.lastIndexOf('-')).trim();
+      var kind = title.split('-').pop();
 
-          group = mapPoints(points, layers, index++, legendTitle, legendIcon);
-          bounds = bounds.extend(group.getBounds());
-        }
+      title = title.split('-').slice(0, -1).join('-');
+      if (title == '') { title = kind; }
+
+      switch (kind) {
+        case constants.polygonsSheetName:
+          createPolygonSettings(mapData.sheets(sheet).elements);
+          setPolygonSetting(polygonSheets, '_polygonsLegendTitle', title);
+          setPolygonSetting(polygonSheets, '_polygonsLegendIcon', icon);
+          polygonSheets++;
+          break;
+        case constants.pointsSheetName:
+          var points = mapData.sheets(sheet).elements;
+          if (points.length > 0) {
+            layers = determineLayers(points);
+            group = mapPoints(points, layers, index++, title, icon);
+            bounds = bounds.extend(group.getBounds());
+          }
+          break;
       }
     }
 
@@ -716,6 +722,8 @@ $(window).on('load', function() {
         }
 
         for (i in allPolygonLegends) {
+          console.log(getPolygonSetting(i, '_polygonsLegendIcon'));
+
           if (getPolygonSetting(i, '_polygonsLegendIcon') != '') {
             $('.polygons-legend' + i + ' h6').prepend(
               '<span class="legend-icon"><i class="fa ' + getPolygonSetting(i, '_polygonsLegendIcon') + '"></i></span>');
@@ -944,6 +952,16 @@ $(window).on('load', function() {
    */
   function getPolygonSetting(p, s) {
     return polygonSettings[p][constants[s]];
+  }
+
+  function setPolygonSetting(p, s, v) {
+    if (polygonSettings[p]) {
+      if (typeof constants[s] !== 'undefined') {
+        polygonSettings[p][constants[s]] = v;
+      } else {
+        polygonSettings[p][s] = v;
+      }
+    }
   }
 
   /**
