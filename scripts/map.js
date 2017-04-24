@@ -408,32 +408,6 @@ $(window).on('load', function() {
       allTextLabelsLayers.push(g);
     }
 
-    // This is triggered when user changes the radio button
-    $('.ladder input:radio[name="prop"]').change(function() {
-      polygon = parseInt($(this).val().split(';')[0]);
-      layer = parseInt($(this).val().split(';')[1]);
-
-      if (layer == -1) {
-        $('.polygons-legend' + polygon).find('.polygons-legend-scale').hide();
-        if (map.hasLayer(allGeojsons[polygon])) {
-          map.removeLayer(allGeojsons[polygon]);
-          if (map.hasLayer(allTextLabelsLayers[polygon])) {
-            map.removeLayer(allTextLabelsLayers[polygon]);
-          }
-        }
-      } else {
-        updatePolygons();
-      }
-    });
-
-    for (t = 0; t < p; t++) {
-      if (getPolygonSetting(t, '_polygonShowOnStart') == 'on') {
-        $('.ladder input:radio[name="prop"][value="' + t + ';0"]').click();
-      } else {
-        $('.ladder input:radio[name="prop"][value="' + t + ';-1"]').click();
-      }
-    }
-
     $('.polygons-legend-merged h6').eq(0).click().click();
 
     completePolygons = true;
@@ -590,10 +564,13 @@ $(window).on('load', function() {
    * redrawn and thus get on top of polygons
    */
   function doubleClickPolylines() {
-    $('#polylines-legend form label input').each(function(i) {
+    $('.polylines-legend form label input').each(function(i) {
       $(this).click().click();
     });
   }
+
+  polylineLegendTitles = [];
+  polylineLegendIcons = [];
 
   /**
    * Here all data processing from the spreadsheet happens
@@ -609,8 +586,10 @@ $(window).on('load', function() {
     var bounds = L.latLngBounds();
     var index = 0;
 
-    // Going through all sheets
+    // Going through all tabs in the Google Sheet
     for (sheet in mapData.sheets()) {
+      s = processTabName(sheet);
+      /*
       var icon = '';
       var title = sheet;
       // Regex for Font Awesome icon name in paranthesis: (fa-icon-o)
@@ -622,36 +601,38 @@ $(window).on('load', function() {
       var kind = title.split('-').pop();
 
       title = title.split('-').slice(0, -1).join('-');
-      if (title == '') { title = kind; }
+      if (title == '') { title = kind; } */
 
-      switch (kind) {
+      switch (s.kind) {
         case constants.polygonsSheetName:
           createPolygonSettings(mapData.sheets(sheet).elements);
-          setPolygonSetting(polygonSheets, '_polygonsLegendTitle', title);
-          setPolygonSetting(polygonSheets, '_polygonsLegendIcon', icon);
+          setPolygonSetting(polygonSheets, '_polygonsLegendTitle', s.title);
+          setPolygonSetting(polygonSheets, '_polygonsLegendIcon', s.icon);
           polygonSheets++;
           break;
         case constants.pointsSheetName:
           var points = mapData.sheets(sheet).elements;
           if (points.length > 0) {
             layers = determineLayers(points);
-            group = mapPoints(points, layers, index++, title, icon);
+            group = mapPoints(points, layers, index++, s.title, s.icon);
             bounds = bounds.extend(group.getBounds());
+          }
+          break;
+        case constants.polylinesSheetName:
+          polylineLegendTitles.push(s.title);
+          polylineLegendIcons.push(s.icon);
+          var polylines = mapData.sheets(sheet).elements;
+          if (polylines.length > 0) {
+            processPolylines(polylines);
           }
           break;
       }
     }
 
-    completePoints = true;
-    centerAndZoomMap(bounds);
+    completePoints = true;    // neither does this.
+    completePolylines = true; // This does not really indicate that polylines are complete because geojsons are loaded asynchronously
 
-    // Add polylines
-    var polylines = mapData.sheets(constants.polylinesSheetName).elements;
-    if (polylines.length > 0) {
-      processPolylines(polylines);
-    } else {
-      completePolylines = true;
-    }
+    centerAndZoomMap(bounds);
 
     // Add polygons
     if (getPolygonSetting(0, '_polygonsGeojsonURL')) {
@@ -710,6 +691,12 @@ $(window).on('load', function() {
 
     function showMap() {
       if (completePoints && completePolylines && completePolygons) {
+        // Add titles + icons to polyline legends
+        for (i in polylineLegendTitles) {
+          $('.polylines-legend' + i).prepend('<h6 class="pointer">' + polylineLegendTitles[i] + '</h6>');
+          $('.polylines-legend' + i + ' h6').prepend('<span class="legend-icon"><i class="fa ' + polylineLegendIcons[i] + '"></i></span>')
+        }
+
         // Add Font-Awesome down arrows to the right of each legend title
         $('.ladder h6').append('<span class="legend-arrow"><i class="fa fa-chevron-down"></i></span>');
         $('.ladder h6').addClass('minimize');
@@ -722,34 +709,16 @@ $(window).on('load', function() {
         }
 
         for (i in allPolygonLegends) {
-          console.log(getPolygonSetting(i, '_polygonsLegendIcon'));
-
           if (getPolygonSetting(i, '_polygonsLegendIcon') != '') {
             $('.polygons-legend' + i + ' h6').prepend(
               '<span class="legend-icon"><i class="fa ' + getPolygonSetting(i, '_polygonsLegendIcon') + '"></i></span>');
           }
         }
 
-        $('.ladder h6').click(function() {
-          if ($(this).hasClass('minimize')) {
-            $('.ladder h6').addClass('minimize');
-            $('.legend-arrow i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
-            $(this).removeClass('minimize')
-              .parent().find('.legend-arrow i')
-              .removeClass('fa-chevron-down')
-              .addClass('fa-chevron-up');
-          } else {
-            $(this).addClass('minimize');
-            $(this).parent().find('.legend-arrow i')
-              .removeClass('fa-chevron-up')
-              .addClass('fa-chevron-down');
-          }
-        });
-
-        $('.ladder h6').get(0).click();
-
+        rearrangeLadder();
         $('#map').css('visibility', 'visible');
         $('.loader').hide();
+
 
         // Open intro popup window in the center of the map
         if (getSetting('_introPopupText') != '') {
@@ -760,6 +729,114 @@ $(window).on('load', function() {
       } else {
         setTimeout(showMap, 50);
       }
+    }
+  }
+
+  function rearrangeLadder() {
+    plg = 0;
+    pll = 0;
+    pnt = 0;
+
+    var ladder = $('.ladder');
+    $('.ladder').remove();
+
+    for (sheet in mapData.foundSheetNames) {
+      s = processTabName(mapData.foundSheetNames[sheet]);
+
+      for (l = 0; l < ladder.length; l++) {
+        var klass = '';
+        switch (s.kind) {
+          case 'Points':
+            klass = 'points-legend' + pnt;
+            break;
+          case 'Polygons':
+            klass = 'polygons-legend' + plg;
+            break;
+          case 'Polylines':
+            klass = 'polylines-legend' + pll;
+            break;
+        }
+
+        if (ladder.eq(l).hasClass(klass) || ladder.eq(l).attr('id') == klass) {
+          $('.leaflet-left.leaflet-top').append(ladder.eq(l));
+          ladder[l] = '';
+
+          if (s.kind == 'Points') {pnt++}
+          if (s.kind == 'Polygons') {plg++}
+          if (s.kind == 'Polylines') {pll++}
+
+          break;
+        }
+      }
+    }
+
+    addLadderInteraction();
+  }
+
+  function addLadderInteraction() {
+    $('.ladder h6').click(function() {
+      if ($(this).hasClass('minimize')) {
+        $('.ladder h6').addClass('minimize');
+        $('.legend-arrow i').removeClass('fa-chevron-up').addClass('fa-chevron-down');
+        $(this).removeClass('minimize')
+          .parent().find('.legend-arrow i')
+          .removeClass('fa-chevron-down')
+          .addClass('fa-chevron-up');
+      } else {
+        $(this).addClass('minimize');
+        $(this).parent().find('.legend-arrow i')
+          .removeClass('fa-chevron-up')
+          .addClass('fa-chevron-down');
+      }
+    });
+
+    // This is triggered when user changes the radio button
+    $('.ladder input:radio[name="prop"]').change(function() {
+      polygon = parseInt($(this).val().split(';')[0]);
+      layer = parseInt($(this).val().split(';')[1]);
+
+      if (layer == -1) {
+        $('.polygons-legend' + polygon).find('.polygons-legend-scale').hide();
+        if (map.hasLayer(allGeojsons[polygon])) {
+          map.removeLayer(allGeojsons[polygon]);
+          if (map.hasLayer(allTextLabelsLayers[polygon])) {
+            map.removeLayer(allTextLabelsLayers[polygon]);
+          }
+        }
+      } else {
+        updatePolygons();
+      }
+    });
+
+    for (t = 0; t < allGeojsons.length; t++) {
+      if (getPolygonSetting(t, '_polygonShowOnStart') == 'on') {
+        $('.ladder input:radio[name="prop"][value="' + t + ';0"]').click();
+      } else {
+        $('.ladder input:radio[name="prop"][value="' + t + ';-1"]').click();
+      }
+    }
+
+    $('.ladder h6').get(0).click();
+  }
+
+  function processTabName(sheet) {
+    var icon = '';
+    var title = sheet;
+    // Regex for Font Awesome icon name in paranthesis: (fa-icon-o)
+    if (sheet.match(/\(fa\-[0-9a-z\-]*\)/)) {
+      icon = sheet.match(/\(fa\-[0-9a-z\-]*\)/)[0].slice(1, -1);
+      title = sheet.split(')')[1];
+    }
+
+    var kind = title.split('-').pop();
+
+    title = title.split('-').slice(0, -1).join('-');
+    if (title == '') { title = kind; }
+
+    return {
+      icon: icon,
+      title: title,
+      kind: kind
     }
   }
 
@@ -784,6 +861,7 @@ $(window).on('load', function() {
     }
   }
 
+  currentPolylineLegend = 0;  // keeps track of the current polyline legend
 
   /**
    * Adds polylines to the map
@@ -791,12 +869,8 @@ $(window).on('load', function() {
   function processPolylines(p) {
     if (!p || p.length == 0) return;
 
-    var pos = (getSetting('_polylinesLegendPos') == 'off')
-      ? 'topleft'
-      : getSetting('_polylinesLegendPos');
-
     var polylinesLegend = L.control.layers(null, null, {
-      position: pos,
+      position: 'topleft',
       collapsed: false,
     });
 
@@ -834,27 +908,8 @@ $(window).on('load', function() {
             + '"></i> ' + p[index]['Display Name']);
 
           if (index == 0) {
-            polylinesLegend._container.id = 'polylines-legend';
-            polylinesLegend._container.className += ' ladder';
-
-            if (getSetting('_polylinesLegendTitle') != '') {
-              $('#polylines-legend').prepend('<h6 class="pointer">' + getSetting('_polylinesLegendTitle') + '</h6>');
-              if (getSetting('_polylinesLegendIcon') != '') {
-                $('#polylines-legend h6').prepend('<span class="legend-icon"><i class="fa '
-                  + getSetting('_polylinesLegendIcon') + '"></i></span>');
-              }
-
-              // Add map title if set to be displayed in polylines legend
-              if (getSetting('_mapTitleDisplay') == 'in polylines legend') {
-                var title = '<h3>' + getSetting('_mapTitle') + '</h3>';
-                var subtitle = '<h6>' + getSetting('_mapSubtitle') + '</h6>';
-                $('#polylines-legend').prepend(title + subtitle);
-              }
-            }
-          }
-
-          if (p.length == index + 1) {
-            completePolylines = true;
+            //polylinesLegend._container.id = 'polylines-legend';
+            polylinesLegend._container.className += ' ladder polylines-legend polylines-legend' + currentPolylineLegend++;
           }
         };
       }(i));
