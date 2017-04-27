@@ -11,6 +11,8 @@ $(window).on('load', function() {
   var completePolygons = false;
   var completePolylines = false;
 
+  var legendOrder = {};
+
   /**
    * Returns an Awesome marker with specified parameters
    */
@@ -177,6 +179,8 @@ $(window).on('load', function() {
         pointsLegend._container.className += ' ladder points-legend';
       }
     }
+
+    legendOrder[legendTitle] = index;
 
     $('#points-legend' + index).prepend('<h6 class="pointer">' + legendTitle + '</h6>');
     if (legendIcon) {
@@ -393,6 +397,8 @@ $(window).on('load', function() {
         var div = L.DomUtil.create('div', 'leaflet-control leaflet-control-custom leaflet-bar ladder polygons-legend' + p);
         div.innerHTML = content;
         div.innerHTML += '</div>';
+
+        legendOrder[getPolygonSetting(p, '_polygonsLegendTitle')] = p;
         return div;
       };
 
@@ -623,7 +629,7 @@ $(window).on('load', function() {
           polylineLegendIcons.push(s.icon);
           var polylines = mapData.sheets(sheet).elements;
           if (polylines.length > 0) {
-            processPolylines(polylines);
+            processPolylines(polylines, s.title);
           }
           break;
       }
@@ -733,10 +739,6 @@ $(window).on('load', function() {
   }
 
   function rearrangeLadder() {
-    plg = 0;
-    pll = 0;
-    pnt = 0;
-
     var ladder = $('.ladder');
     $('.ladder').remove();
 
@@ -747,24 +749,21 @@ $(window).on('load', function() {
         var klass = '';
         switch (s.kind) {
           case 'Points':
-            klass = 'points-legend' + pnt;
+            klass = 'points';
             break;
           case 'Polygons':
-            klass = 'polygons-legend' + plg;
+            klass = 'polygons';
             break;
           case 'Polylines':
-            klass = 'polylines-legend' + pll;
+            klass = 'polylines';
             break;
         }
+
+        klass += '-legend' + legendOrder[s.title];
 
         if (ladder.eq(l).hasClass(klass) || ladder.eq(l).attr('id') == klass) {
           $('.leaflet-left.leaflet-top').append(ladder.eq(l));
           ladder[l] = '';
-
-          if (s.kind == 'Points') {pnt++}
-          if (s.kind == 'Polygons') {plg++}
-          if (s.kind == 'Polylines') {pll++}
-
           break;
         }
       }
@@ -866,7 +865,7 @@ $(window).on('load', function() {
   /**
    * Adds polylines to the map
    */
-  function processPolylines(p) {
+  function processPolylines(p, tt) {
     if (!p || p.length == 0) return;
 
     var polylinesLegend = L.control.layers(null, null, {
@@ -910,6 +909,7 @@ $(window).on('load', function() {
           if (index == 0) {
             //polylinesLegend._container.id = 'polylines-legend';
             polylinesLegend._container.className += ' ladder polylines-legend polylines-legend' + currentPolylineLegend++;
+            legendOrder[tt] = currentPolylineLegend - 1;
           }
         };
       }(i));
